@@ -1,18 +1,21 @@
 {
-  description = "Development environment for pastebin-worker";
+  description = "Development shell for pastebin-worker";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
   outputs = { self, nixpkgs }: {
-    devShells.default = nixpkgs.lib.mkShell {
-      buildInputs = [
-        nixpkgs.nodejs_latest
-        nixpkgs.nodePackages.pnpm
-        nixpkgs.nodePackages.wrangler
-      ];
-    };
+    devShells.x86_64-darwin.default = 
+      let
+        pkgs = import nixpkgs { system = "x86_64-darwin"; };
+      in
+      pkgs.mkShell {
+        buildInputs = [
+          pkgs.nodejs_latest
+          pkgs.nodePackages.pnpm
+          pkgs.nodePackages.wrangler
+        ];
+      };
   };
 }
-
