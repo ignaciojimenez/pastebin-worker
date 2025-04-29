@@ -24,32 +24,32 @@ crons = ["0 0 * * *"]
 
 [[routes]]
 # Refer to https://developers.cloudflare.com/workers/wrangler/configuration/#routes
-pattern = "shz.al"
+pattern = "curlbin.ignacio.systems"
 custom_domain = true
 
 [[kv_namespaces]]
 binding = "PB"  # do not touch this
-id = "435f8959b9de485ea48751ba557d90f5"  # id of your KV namespace
+id = "cc5a099a576e403f90d41bc6b9dac768"  # id of your KV namespace
 
 [[r2_buckets]]
 binding = "R2"  # do not touch this
-bucket_name = "pb-shz-al"  # bucket name of your R2 bucket
+bucket_name = "backups"  # bucket name of your R2 bucket
 
 [vars]
 # must be consistent with your routes
-DEPLOY_URL = "https://shz.al"
+DEPLOY_URL = "https://curlbin.ignacio.systems"
 
 # url to repo, displayed in the index page
-REPO = "https://github.com/SharzyL/pastebin-worker"
+REPO = "https://github.com/ignaciojimenez/pastebin-worker"
 
 # the page title displayed in index page
 INDEX_PAGE_TITLE = "Pastebin Worker"
 
 # the name displayed in TOS
-TOS_MAINTAINER = "Sharzy"
+TOS_MAINTAINER = "Ignacio"
 
 # the email displayed in TOS
-TOS_MAIL = "pb@shz.al"
+TOS_MAIL = "me@"
 
 # Cache-Control max-age for static pages
 CACHE_STATIC_PAGE_AGE = 7200
@@ -58,10 +58,10 @@ CACHE_STATIC_PAGE_AGE = 7200
 CACHE_PASTE_AGE = 600
 
 # Default expiration
-DEFAULT_EXPIRATION = "7d"
+DEFAULT_EXPIRATION = "30d"
 
 # Max expiration
-MAX_EXPIRATION = "30d"
+MAX_EXPIRATION = "180d"
 
 # A collection of {username: password} pair
 # Leave empty to disable auth
@@ -71,7 +71,7 @@ BASIC_AUTH = {}
 R2_THRESHOLD = "100K"
 
 # File larger than this will be denied
-R2_MAX_ALLOWED = "100M"
+R2_MAX_ALLOWED = "200M"
 
 # The following mimetypes will be converted to text/plain
 DISALLOWED_MIME_FOR_PASTE = ["text/html"]
