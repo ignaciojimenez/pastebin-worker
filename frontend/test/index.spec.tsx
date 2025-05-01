@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest"
+import { describe, it, vi, expect, beforeAll, afterEach, afterAll } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
-import { PasteBin } from "../components/PasteBin.js"
+import { PasteBin } from "../pages/PasteBin.js"
 
 export const mockedPasteUpload: PasteResponse = {
   url: "https://example.com/abcd",
@@ -12,15 +12,16 @@ export const mockedPasteUpload: PasteResponse = {
 export const mockedPasteContent = "something"
 
 export const server = setupServer(
-  http.post("/", () => {
+  http.post(`${APIUrl}/`, () => {
     return HttpResponse.json(mockedPasteUpload)
   }),
-  http.get("/abcd", () => {
+  http.get(`${APIUrl}/abcd`, () => {
     return HttpResponse.text(mockedPasteContent)
   }),
 )
 
 beforeAll(() => {
+  stubBrowerFunctions()
   server.listen()
 })
 
@@ -30,14 +31,17 @@ afterEach(() => {
 })
 
 afterAll(() => {
+  unStubBrowerFunctions()
   server.close()
 })
 
 import "@testing-library/jest-dom/vitest"
 import { userEvent } from "@testing-library/user-event"
-import { PasteResponse } from "../../src/shared.js"
+import { PasteResponse } from "../../shared/interfaces.js"
 import { setupServer } from "msw/node"
 import { http, HttpResponse } from "msw"
+import { stubBrowerFunctions, unStubBrowerFunctions } from "./testUtils.js"
+import { APIUrl } from "../utils/utils.js"
 
 describe("Pastebin", () => {
   it("can upload", async () => {
@@ -58,8 +62,12 @@ describe("Pastebin", () => {
     expect(submitter).toBeEnabled()
     await userEvent.click(submitter)
 
-    expect(screen.getByText(mockedPasteUpload.url)).toBeInTheDocument()
-    expect(screen.getByText(mockedPasteUpload.manageUrl)).toBeInTheDocument()
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const urlShow = screen.getByRole("textbox", { name: "Paste URL" })
+    expect((urlShow as HTMLInputElement).value).toStrictEqual(mockedPasteUpload.url)
+
+    const manageUrlShow = screen.getByRole("textbox", { name: "Manage URL" })
+    expect((manageUrlShow as HTMLInputElement).value).toStrictEqual(mockedPasteUpload.manageUrl)
   })
 
   it("refuse illegal settings", async () => {
@@ -74,11 +82,7 @@ describe("Pastebin", () => {
 
 describe("Pastebin admin page", () => {
   it("renders admin page", async () => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: new URL("https://example.com/abcd:xxxxxxxxx"),
-    })
+    vi.stubGlobal("location", new URL("https://example.com/abcd:xxxxxxxxx"))
     render(<PasteBin />)
 
     const editor = screen.getByRole("textbox", { name: "Paste editor" })

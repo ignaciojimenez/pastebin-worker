@@ -1,10 +1,20 @@
-import { NAME_REGEX, parseExpiration, parseExpirationReadable, PASSWD_SEP } from "../../src/shared.js"
+import { NAME_REGEX, PASSWD_SEP } from "../../shared/constants.js"
+import { parseExpiration, parseExpirationReadable } from "../../shared/parsers.js"
 
 export const BaseUrl = DEPLOY_URL
 export const APIUrl = API_URL
 
 export const maxExpirationSeconds = parseExpiration(MAX_EXPIRATION)!
 export const maxExpirationReadable = parseExpirationReadable(MAX_EXPIRATION)!
+
+export class ErrorWithTitle extends Error {
+  public title: string
+
+  constructor(title: string, msg: string) {
+    super(msg)
+    this.title = title
+  }
+}
 
 export function formatSize(size: number): string {
   if (!size) return "0"

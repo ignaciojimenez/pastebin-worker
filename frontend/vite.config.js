@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss(), transformHtmlPlugin()],
     define: {
       DEPLOY_URL: mode === "development" ? JSON.stringify(devAPIUrl) : JSON.stringify(deployUrl),
-      API_URL: mode === "development" ? JSON.stringify(devAPIUrl) : JSON.stringify(""),
+      API_URL: mode === "development" ? JSON.stringify(devAPIUrl) : JSON.stringify(deployUrl),
       REPO: JSON.stringify(getVar("REPO")),
       MAX_EXPIRATION: JSON.stringify(getVar("MAX_EXPIRATION")),
       DEFAULT_EXPIRATION: JSON.stringify(getVar("DEFAULT_EXPIRATION")),

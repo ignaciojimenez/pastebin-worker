@@ -2,7 +2,7 @@ name = "pb"
 compatibility_date = "2025-04-24"
 
 workers_dev = false
-main = "src/index.ts"
+main = "worker/index.ts"
 
 [[rules]]
 type = "Text"
@@ -74,4 +74,4 @@ R2_THRESHOLD = "100K"
 R2_MAX_ALLOWED = "200M"
 
 # The following mimetypes will be converted to text/plain
-DISALLOWED_MIME_FOR_PASTE = ["text/html"]
+DISALLOWED_MIME_FOR_PASTE = ["text/html", "audio/x-mpegurl"]

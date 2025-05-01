@@ -5,6 +5,7 @@ import {
   CardProps,
   Divider,
   Input,
+  mergeClasses,
   Radio,
   RadioGroup,
   Switch,
@@ -13,6 +14,7 @@ import {
 import { BaseUrl, verifyExpiration, verifyManageUrl, verifyName } from "../utils/utils.js"
 import React from "react"
 import { InfoIcon } from "./icons.js"
+import { cardOverrides, inputOverrides, radioOverrides, switchOverrides, tst } from "../utils/overrides.js"
 
 export type UploadKind = "short" | "long" | "custom" | "manage"
 
@@ -32,18 +34,22 @@ interface PasteSettingPanelProps extends CardProps {
 }
 
 export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteSettingPanelProps) {
+  const radioClassNames = mergeClasses(radioOverrides, { labelWrapper: "ml-2.5" })
   return (
-    <Card aria-label="Pastebin setting panel" {...rest}>
-      <CardHeader className="text-2xl">Settings</CardHeader>
-      <Divider />
+    <Card aria-label="Pastebin setting panel" classNames={cardOverrides} {...rest}>
+      <CardHeader className="text-2xl pl-4 pb-2">Settings</CardHeader>
+      <Divider className={tst} />
       <CardBody>
-        <div className="gap-4 mb-4 flex flex-row">
+        <div className="gap-4 mb-3 flex flex-row">
           <Input
             type="text"
             label="Expiration"
             // to avoid duplicated name, see https://github.com/adobe/react-spectrum/discussions/8037
             aria-labelledby=""
-            className="basis-80"
+            classNames={{
+              base: "basis-80",
+              ...inputOverrides,
+            }}
             defaultValue="7d"
             value={setting.expiration}
             isRequired
@@ -58,16 +64,17 @@ export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteS
             aria-labelledby=""
             value={setting.password}
             onValueChange={(p) => onSettingChange({ ...setting, password: p })}
+            classNames={inputOverrides}
             placeholder={"Generated randomly"}
             description="Used to update/delete your paste"
           />
         </div>
         <RadioGroup
-          className="gap-4 mb-2 w-full"
+          className="gap-4 mb-3 w-full"
           value={setting.uploadKind}
           onValueChange={(v) => onSettingChange({ ...setting, uploadKind: v as UploadKind })}
         >
-          <Radio value="short" description={`Example: ${BaseUrl}/BxWH`}>
+          <Radio value="short" description={`Example: ${BaseUrl}/BxWH`} classNames={radioClassNames}>
             Generate a short random URL
           </Radio>
           <Radio
@@ -75,11 +82,12 @@ export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteS
             description={`Example: ${BaseUrl}/5HQWYNmjA4h44SmybeThXXAm`}
             classNames={{
               description: "text-ellipsis max-w-[calc(100vw-5rem)] whitespace-nowrap overflow-hidden",
+              ...radioClassNames,
             }}
           >
             Generate a long random URL
           </Radio>
-          <Radio value="custom" description={`Example: ${BaseUrl}/~stocking`}>
+          <Radio value="custom" classNames={radioClassNames} description={`Example: ${BaseUrl}/~stocking`}>
             Set by your own
           </Radio>
           {setting.uploadKind === "custom" ? (
@@ -87,7 +95,7 @@ export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteS
               value={setting.name}
               onValueChange={(n) => onSettingChange({ ...setting, name: n })}
               type="text"
-              className="shrink"
+              classNames={radioClassNames}
               isInvalid={!verifyName(setting.name)[0]}
               errorMessage={verifyName(setting.name)[1]}
               startContent={
@@ -97,7 +105,7 @@ export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteS
               }
             />
           ) : null}
-          <Radio value="manage">
+          <Radio value="manage" classNames={radioClassNames}>
             <div className="">Update or delete</div>
           </Radio>
           {setting.uploadKind === "manage" ? (
@@ -112,9 +120,13 @@ export function PanelSettingsPanel({ setting, onSettingChange, ...rest }: PasteS
             />
           ) : null}
         </RadioGroup>
-        <Divider />
+        <Divider className={tst} />
         <div className="mt-3 flex flex-row items-center">
-          <Switch isSelected={setting.doEncrypt} onValueChange={(v) => onSettingChange({ ...setting, doEncrypt: v })}>
+          <Switch
+            classNames={switchOverrides}
+            isSelected={setting.doEncrypt}
+            onValueChange={(v) => onSettingChange({ ...setting, doEncrypt: v })}
+          >
             Client-side encryption
           </Switch>
           <Tooltip
