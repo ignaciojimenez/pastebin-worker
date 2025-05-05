@@ -58,10 +58,10 @@ CACHE_STATIC_PAGE_AGE = 7200
 CACHE_PASTE_AGE = 600
 
 # Default expiration
-DEFAULT_EXPIRATION = "30d"
+DEFAULT_EXPIRATION = "180d"
 
 # Max expiration
-MAX_EXPIRATION = "180d"
+MAX_EXPIRATION = "365d"
 
 # A collection of {username: password} pair
 # Leave empty to disable auth
