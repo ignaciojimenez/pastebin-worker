@@ -12,11 +12,11 @@ The `Content-Type` header is set to the mime type inferred from the filename of 
 
 The `Content-Disposition` header is set to `inline` by default. But can be overriden by `?a` query string. If the paste is uploaded with filename, or `<filename>` is set in given request URL, `Content-Disposition` is appended with `filename*` indicating the filename. If the paste is encrypted, the filename is appended with `.encrypted` suffix.
 
-If the paste is encrypted, an `X-Encryption-Scheme` header will be set to the encryption scheme.
+If the paste is encrypted, an `X-PB-Encryption-Scheme` header will be set to the encryption scheme.
+
+If the paste is uploaded with a `lang` parameter, an `X-PB-Highlight-Language` header will be set to the encryption scheme.
 
 - `?a=`: optional. Set `Content-Disposition` to `attachment` if present.
-
-- `?lang=<lang>`: optional. Returns a web page with syntax highlight powered by prism.js.
 
 - `?mime=<mime>`: optional. Specify the mime-type, suppressing the effect of `<ext>`. No effect if `lang` is specified (in which case the mime-type is always `text/html`).
 
@@ -34,8 +34,6 @@ $ curl https://shz.al/i-p-
 https://web.archive.org/web/20210328091143/https://mp.weixin.qq.com/s/5phCQP7i-JpSvzPEMGk56Q
 
 $ curl https://shz.al/~panty.jpg | feh -
-
-$ firefox 'https://shz.al/kf7z?lang=nix'
 
 $ curl 'https://shz.al/~panty.jpg?mime=image/png' -w '%{content_type}' -o /dev/null -sS
 image/png
@@ -72,7 +70,7 @@ $ curl -L https://shz.al/u/i-p-
 
 ## GET `/d/<name>`
 
-Return the web page that will decrypt the paste of name `<name>` in browser.
+Return the web page that will display the content of the paste of name `<name>`. If the paste is encrypted, a key can be appended to the URL to decrypt the paste of name `<name>` in browser.
 
 If error occurs, the worker returns status code different from `302`:
 
@@ -82,7 +80,7 @@ If error occurs, the worker returns status code different from `302`:
 Usage example:
 
 ```shell
-$ firefox https://shz.al/e/i-p-
+$ firefox https://shz.al/d/i-p-
 ```
 
 ## GET `/m/<name>`
@@ -190,7 +188,9 @@ Upload your paste. It accept parameters in form-data:
 
 - `p`: optional. The flag of **private mode**. If specified to any value, the name of the paste is as long as 24 characters. No effect if `n` is used.
 -
-- `encryption-scheme`: optional. The encryption scheme used in the uploaded paste. It will be returned as `X-Encryption-Scheme` header on fetching paste. Note that this is not the encryption scheme that the backend will perform.
+- `encryption-scheme`: optional. The encryption scheme used in the uploaded paste. It will be returned as `X-PB-Encryption-Scheme` header on fetching paste. Note that this is not the encryption scheme that the backend will perform.
+
+- `lang`: optional. The language of the uploaded paste for syntax highlighting. Should be a lower-case name of language listed in [highlight.js documentation](https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md). This will be returned as `X-PB-Highlight-Language` header on fetching paste.
 
 `POST` method returns a JSON string by default, if no error occurs, for example:
 
@@ -206,7 +206,6 @@ Upload your paste. It accept parameters in form-data:
 Explanation of the fields:
 
 - `url`: String. The URL to fetch the paste. When using a customized name, it looks like `https//shz.al/~myname`.
-- `suggestedUrl`: Optional string. The URL that may carry filename or URL redirection.
 - `manageUrl`: String. The URL to update and delete the paste, which is `url` suffixed by `~` and the password.
 - `expirationSeconds`: String. The expiration seconds.
 - `expireAt`: String. An ISO String representing when the paste will expire.

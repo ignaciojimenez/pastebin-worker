@@ -1,5 +1,5 @@
 import { verifyAuth } from "../pages/auth.js"
-import { decode, genRandStr, isLegalUrl, WorkerError } from "../common.js"
+import { decode, genRandStr, WorkerError } from "../common.js"
 import { createPaste, getPasteMetadata, pasteNameAvailable, updatePaste } from "../storage/storage.js"
 import {
   DEFAULT_PASSWD_LEN,
@@ -14,16 +14,6 @@ import { parsePath, parseSize, parseExpiration } from "../../shared/parsers.js"
 import { PasteResponse } from "../../shared/interfaces.js"
 import { MaxFileSizeExceededError, MultipartParseError, parseMultipartRequest } from "@mjackson/multipart-parser"
 import { handleMPUComplete, handleMPUCreate, handleMPUCreateUpdate, handleMPUResume } from "./handleMPU.js"
-
-function suggestUrl(short: string, baseUrl: string, filename?: string, contentAsString?: string) {
-  if (filename) {
-    return `${baseUrl}/${short}/${encodeURIComponent(filename)}`
-  } else if (contentAsString && isLegalUrl(contentAsString)) {
-    return `${baseUrl}/u/${short}`
-  } else {
-    return undefined
-  }
-}
 
 type ParsedMultipartPart = {
   filename?: string
@@ -118,6 +108,7 @@ export async function handlePostOrPut(
   const passwdFromForm = parts.get("s")?.contentAsString()
   const expireFromForm: string | undefined = parts.get("e")?.contentAsString()
   const encryptionScheme: string | undefined = parts.get("encryption-scheme")?.contentAsString()
+  const highlightLanguage = parts.get("lang")?.contentAsString()
   const expire = expireFromForm ? expireFromForm : env.DEFAULT_EXPIRATION
 
   const uploadedParts = isMPUComplete ? (JSON.parse(contentAsString()) as R2UploadedPart[]) : undefined
@@ -204,13 +195,13 @@ export async function handlePostOrPut(
       passwd: newPasswd,
       contentLength,
       filename,
+      highlightLanguage,
       encryptionScheme,
       isMPUComplete,
     })
     return makeResponse(
       {
         url: accessUrl(pasteName),
-        suggestedUrl: suggestUrl(pasteName, env.DEPLOY_URL, filename, contentAsString()),
         manageUrl: manageUrl(pasteName, newPasswd),
         expirationSeconds,
         expireAt: new Date(now.getTime() + 1000 * expirationSeconds).toISOString(),
@@ -242,6 +233,7 @@ export async function handlePostOrPut(
       now,
       passwd: password,
       filename,
+      highlightLanguage,
       contentLength,
       encryptionScheme,
       isMPUComplete,
@@ -250,7 +242,6 @@ export async function handlePostOrPut(
     return makeResponse(
       {
         url: accessUrl(pasteName),
-        suggestedUrl: suggestUrl(pasteName, env.DEPLOY_URL, filename, contentAsString()),
         manageUrl: manageUrl(pasteName, password),
         expirationSeconds,
         expireAt: new Date(now.getTime() + 1000 * expirationSeconds).toISOString(),

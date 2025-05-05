@@ -1,6 +1,7 @@
 import React, { JSX, useEffect, useState, useSyncExternalStore } from "react"
-import { ComputerIcon, MoonIcon, SunIcon } from "./icons.js"
 import { Button, ButtonProps, Tooltip } from "@heroui/react"
+
+import { ComputerIcon, MoonIcon, SunIcon } from "./icons.js"
 import { tst } from "../utils/overrides.js"
 
 const modeSelections = ["system", "light", "dark"]
@@ -54,6 +55,17 @@ export function useDarkModeSelection(): [
   }, [])
 
   const isDark = modeSelection === undefined || modeSelection === "system" ? isSystemDark : modeSelection === "dark"
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.remove("light")
+      document.body.classList.add("dark")
+    } else {
+      document.body.classList.remove("dark")
+      document.body.classList.add("light")
+    }
+  }, [isDark])
+
   return [isDark, modeSelection, setModeSelection]
 }
 

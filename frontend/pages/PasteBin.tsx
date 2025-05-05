@@ -2,14 +2,14 @@ import React, { useEffect, useState, useTransition } from "react"
 
 import { Button, Link } from "@heroui/react"
 
-import type { PasteResponse } from "../../shared/interfaces.js"
-import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
-
 import { DarkModeToggle, useDarkModeSelection } from "../components/DarkModeToggle.js"
 import { useErrorModal } from "../components/ErrorModal.js"
 import { PanelSettingsPanel, PasteSetting } from "../components/PasteSettingPanel.js"
 import { UploadedPanel } from "../components/UploadedPanel.js"
-import { PasteEditor, PasteEditState } from "../components/PasteEditor.js"
+import { PasteInputPanel, PasteEditState } from "../components/PasteInputPanel.js"
+
+import type { PasteResponse } from "../../shared/interfaces.js"
+import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
 
 import {
   verifyExpiration,
@@ -29,6 +29,7 @@ export function PasteBin() {
     editKind: "edit",
     editContent: "",
     file: null,
+    editHighlightLang: "plaintext",
   })
 
   const [pasteSetting, setPasteSetting] = useState<PasteSetting>({
@@ -47,7 +48,7 @@ export function PasteBin() {
   const [loadingProgress, setLoadingProgress] = useState<number | undefined>(undefined)
   const [isInitPasteLoading, startFetchingInitPaste] = useTransition()
 
-  const [isDark, modeSelection, setModeSelection] = useDarkModeSelection()
+  const [_, modeSelection, setModeSelection] = useDarkModeSelection()
 
   const { ErrorModal, showModal, handleError, handleFailedResp } = useErrorModal()
 
@@ -55,6 +56,7 @@ export function PasteBin() {
   useEffect(() => {
     // TODO: do not fetch paste for a large file paste
     const pathname = location.pathname
+    // const pathname = new URL("http://localhost:8787/ds2W:ShNkSKdf5rZypdcJEcAdFmw3").pathname
     const { name, password, filename, ext } = parsePath(pathname)
 
     if (password !== undefined && pasteSetting.manageUrl === "") {
@@ -77,18 +79,22 @@ export function PasteBin() {
           }
           const contentType = resp.headers.get("Content-Type")
           const contentDisp = resp.headers.get("Content-Disposition")
+          const contentLang = resp.headers.get("X-PB-Highlight-Language")
 
-          if (contentType && contentType.startsWith("text/")) {
+          let pasteFilename = filename
+          if (pasteFilename === undefined && contentDisp !== null) {
+            pasteFilename = parseFilenameFromContentDisposition(contentDisp)
+          }
+
+          if (contentLang || (contentType && contentType.startsWith("text/"))) {
             setEditorState({
               editKind: "edit",
               editContent: await resp.text(),
               file: null,
+              editHighlightLang: contentLang || undefined,
+              editFilename: pasteFilename,
             })
           } else {
-            let pasteFilename = filename
-            if (pasteFilename === undefined && contentDisp !== null) {
-              pasteFilename = parseFilenameFromContentDisposition(contentDisp)
-            }
             setEditorState({
               editKind: "file",
               editContent: "",
@@ -213,15 +219,10 @@ export function PasteBin() {
   )
 
   return (
-    <main
-      className={
-        `flex flex-col items-center min-h-screen font-sans ${tst} bg-background text-foreground` +
-        (isDark ? " dark" : " light")
-      }
-    >
+    <main className={`flex flex-col items-center min-h-screen font-sans ${tst} bg-background text-foreground`}>
       <div className="grow w-full max-w-[64rem]">
         {info}
-        <PasteEditor
+        <PasteInputPanel
           isPasteLoading={isInitPasteLoading}
           state={editorState}
           onStateChange={setEditorState}

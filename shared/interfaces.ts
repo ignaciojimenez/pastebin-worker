@@ -4,7 +4,6 @@ export type PasteLocation = "KV" | "R2"
 
 export type PasteResponse = {
   url: string
-  suggestedUrl?: string
   manageUrl: string
   expirationSeconds: number
   expireAt: string
@@ -17,6 +16,7 @@ export type MetaResponse = {
   sizeBytes: number
   location: PasteLocation
   filename?: string
+  highlightLanguage?: string
   encryptionScheme?: string
 }
 

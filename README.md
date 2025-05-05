@@ -7,7 +7,7 @@ This is a pastebin that can be deployed on Cloudflare workers. Try it on [shz.al
 **Features**:
 
 1. Share your paste with as short as 4 characters, or even customized URL.
-1. **Syntax highlighting** powered by PrismJS
+1. **Syntax highlighting** powered by highlight.js.
 1. Client-side encryption
 1. Render **markdown** file as HTML
 1. URL shortener
@@ -73,7 +73,6 @@ Error 401: incorrect passwd for basic auth
 $ curl -u admin1:this-is-passwd-1 -Fc=@/path/to/file example-pb.com
 {
   "url": "https://example-pb.com/YCDX",
-  "suggestUrl": null,
   "admin": "https://example-pb.com/YCDX:Sij23HwbMjeZwKznY3K5trG8",
   "isPrivate": false
 }
