@@ -84,7 +84,10 @@ export function PasteInputPanel({ isPasteLoading, state, onStateChange, ...rest 
               onDrop={onDrop}
               onDragEnter={() => setDragged(true)}
               onDragLeave={() => setDragged(false)}
-              onDragOver={() => setDragged(true)}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragged(true)
+              }}
               onClick={() => fileInput.current?.click()}
             >
               <input

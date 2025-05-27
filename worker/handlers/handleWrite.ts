@@ -90,8 +90,6 @@ export async function handlePostOrPut(
 
   const contentType = request.headers.get("Content-Type") || ""
 
-  // TODO: support multipart upload (https://developers.cloudflare.com/r2/api/workers/workers-multipart-usage/)
-
   // parse formdata
   if (!contentType.includes("multipart/form-data")) {
     throw new WorkerError(400, `bad usage, please use 'multipart/form-data' instead of ${contentType}`)
@@ -176,7 +174,7 @@ export async function handlePostOrPut(
       }
     }
 
-    const etag = isMPUComplete ? await handleMPUComplete(request, env, uploadedParts!) : undefined
+    const r2Object = isMPUComplete ? await handleMPUComplete(request, env, uploadedParts!) : undefined
 
     const originalMetadata = await getPasteMetadata(env, pasteName)
     if (originalMetadata === null) {
@@ -193,7 +191,7 @@ export async function handlePostOrPut(
       expirationSeconds,
       now,
       passwd: newPasswd,
-      contentLength,
+      contentLength: r2Object?.size || contentLength,
       filename,
       highlightLanguage,
       encryptionScheme,
@@ -206,7 +204,7 @@ export async function handlePostOrPut(
         expirationSeconds,
         expireAt: new Date(now.getTime() + 1000 * expirationSeconds).toISOString(),
       },
-      { etag },
+      { etag: r2Object?.httpEtag },
     )
   } else {
     let pasteName: string | undefined
@@ -225,7 +223,7 @@ export async function handlePostOrPut(
       pasteName = genRandStr(isPrivate ? PRIVATE_PASTE_NAME_LEN : PASTE_NAME_LEN)
     }
 
-    const etag = isMPUComplete ? await handleMPUComplete(request, env, uploadedParts!) : undefined
+    const r2Object = isMPUComplete ? await handleMPUComplete(request, env, uploadedParts!) : undefined
 
     const password = passwdFromForm || genRandStr(DEFAULT_PASSWD_LEN)
     await createPaste(env, pasteName, content, {
@@ -234,7 +232,7 @@ export async function handlePostOrPut(
       passwd: password,
       filename,
       highlightLanguage,
-      contentLength,
+      contentLength: r2Object?.size || contentLength,
       encryptionScheme,
       isMPUComplete,
     })
@@ -246,7 +244,7 @@ export async function handlePostOrPut(
         expirationSeconds,
         expireAt: new Date(now.getTime() + 1000 * expirationSeconds).toISOString(),
       },
-      { etag },
+      { etag: r2Object?.httpEtag },
     )
   }
 }
