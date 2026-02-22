@@ -304,3 +304,32 @@ the paste will be deleted in seconds
 $ curl https://shz.al/~hitagi
 not found
 ```
+
+## Headless Mode
+
+Set `HEADLESS_MODE = true` in `wrangler.toml` for an API-only deployment. This replaces the upload UI with a minimal landing page and disables non-essential routes:
+
+**Disabled routes:**
+
+- `GET /u/<name>` — URL redirect (returns 403)
+- `GET /a/<name>` — article/markdown rendering (returns 403)
+- `GET /<name>:<passwd>` — admin edit page (returns headless landing page instead)
+
+**Unaffected routes** (work identically with or without headless mode):
+
+- `POST /` — paste upload
+- `GET /<name>` — raw paste retrieval
+- `GET /d/<name>` — display page (needed for client-side decryption)
+- `GET /m/<name>` — paste metadata
+- `PUT /<name>:<passwd>` — paste update
+- `DELETE /<name>:<passwd>` — paste deletion
+- `HEAD /*` — metadata via headers
+- `/api`, `/tos` — documentation pages
+- `/favicon.ico`, `/assets/*` — static assets
+
+**Configuration:**
+
+```toml
+[vars]
+HEADLESS_MODE = true
+```

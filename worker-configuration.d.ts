@@ -22,6 +22,7 @@ declare namespace Cloudflare {
 		R2_THRESHOLD: string;
 		R2_MAX_ALLOWED: string;
 		DISALLOWED_MIME_FOR_PASTE: string[];
+		HEADLESS_MODE: boolean;
 	}
 }
 interface Env extends Cloudflare.Env {}

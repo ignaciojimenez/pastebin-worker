@@ -1,6 +1,7 @@
 import { decode, isLegalUrl, WorkerError, escapeHtml } from "../common.js"
 import { getDocPage } from "../pages/docs.js"
 import { verifyAuth } from "../pages/auth.js"
+import { headlessLandingPage } from "../pages/headless.js"
 import mime from "mime"
 import { makeMarkdown } from "../pages/markdown.js"
 import type { PasteMetadata, PasteWithMetadata } from "../storage/storage.js"
@@ -59,6 +60,15 @@ async function handleStaticPages(request: Request, env: Env, _: ExecutionContext
 
   // Handle index.html with SSR
   if (path === "/index.html") {
+    // Headless mode: return minimal landing page instead of React UI
+    if (env.HEADLESS_MODE) {
+      return new Response(headlessLandingPage(env), {
+        headers: {
+          "Content-Type": "text/html;charset=UTF-8",
+          ...staticPageCacheHeader(env),
+        },
+      })
+    }
     // Auth check
     const authResponse = verifyAuth(request, env)
     if (authResponse !== null) {
@@ -212,6 +222,9 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
 
   // handle URL redirection
   if (role === "u") {
+    if (env.HEADLESS_MODE) {
+      throw new WorkerError(403, "URL redirect is disabled in headless mode")
+    }
     if (item.metadata.sizeBytes > MAX_URL_REDIRECT_LEN) {
       throw new WorkerError(400, `URL too long to be redirected (max ${MAX_URL_REDIRECT_LEN} bytes)`)
     }
@@ -225,6 +238,9 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
 
   // handle article (render as markdown)
   if (role === "a") {
+    if (env.HEADLESS_MODE) {
+      throw new WorkerError(403, "Article rendering is disabled in headless mode")
+    }
     return new Response(shouldGetPasteContent ? makeMarkdown(await decodeMaybeStream(item.paste)) : null, {
       headers: {
         "Content-Type": `text/html;charset=UTF-8`,
