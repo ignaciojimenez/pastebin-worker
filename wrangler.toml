@@ -77,4 +77,36 @@ R2_MAX_ALLOWED = "200M"
 DISALLOWED_MIME_FOR_PASTE = ["text/html", "audio/x-mpegurl"]
 
 # Set to true for API-only mode: disables upload UI, URL redirects, and article rendering
-HEADLESS_MODE = false
+HEADLESS_MODE = true
+
+#----------------------------------------
+# Dev preview environment
+#----------------------------------------
+
+[env.dev]
+workers_dev = true
+name = "pb-dev"
+
+[[env.dev.kv_namespaces]]
+binding = "PB"
+id = "<DEV_KV_NAMESPACE_ID>"  # run: wrangler kv namespace create PB --env dev
+
+[[env.dev.r2_buckets]]
+binding = "R2"
+bucket_name = "backups-dev"  # run: wrangler r2 bucket create backups-dev
+
+[env.dev.vars]
+DEPLOY_URL = "https://pb-dev.ignaciojimenez.workers.dev"
+REPO = "https://github.com/ignaciojimenez/pastebin-worker"
+INDEX_PAGE_TITLE = "Pastebin Worker (Dev)"
+TOS_MAINTAINER = "Ignacio"
+TOS_MAIL = "me@"
+CACHE_STATIC_PAGE_AGE = 0
+CACHE_PASTE_AGE = 0
+DEFAULT_EXPIRATION = "1d"
+MAX_EXPIRATION = "7d"
+BASIC_AUTH = {}
+R2_THRESHOLD = "100K"
+R2_MAX_ALLOWED = "200M"
+DISALLOWED_MIME_FOR_PASTE = ["text/html", "audio/x-mpegurl"]
+HEADLESS_MODE = true
