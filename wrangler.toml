@@ -75,3 +75,6 @@ R2_MAX_ALLOWED = "200M"
 
 # The following mimetypes will be converted to text/plain
 DISALLOWED_MIME_FOR_PASTE = ["text/html", "audio/x-mpegurl"]
+
+# Set to true for API-only mode: disables upload UI, URL redirects, and article rendering
+HEADLESS_MODE = false
