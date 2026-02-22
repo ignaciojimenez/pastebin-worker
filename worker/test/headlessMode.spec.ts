@@ -18,7 +18,7 @@ describe("headless mode", () => {
     const resp = await workerFetch(ctx, BASE_URL)
     expect(resp.status).toStrictEqual(200)
     const text = await resp.text()
-    expect(text).toContain("API-only pastebin service")
+    expect(text).toContain("API-only mode")
     expect(text).toContain(env.DEPLOY_URL)
     expect(resp.headers.get("Content-Type")).toStrictEqual("text/html;charset=UTF-8")
   })
@@ -29,7 +29,7 @@ describe("headless mode", () => {
     const manageResp = await workerFetch(ctx, uploadResp.manageUrl)
     expect(manageResp.status).toStrictEqual(200)
     const text = await manageResp.text()
-    expect(text).toContain("API-only pastebin service")
+    expect(text).toContain("API-only mode")
   })
 
   it("should still allow POST / to create pastes", async () => {
