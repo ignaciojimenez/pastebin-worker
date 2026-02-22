@@ -6,13 +6,11 @@
   - Add `shellHook` to run `yarn install --frozen-lockfile` if `node_modules` is stale
   - Add `.envrc` with `use flake` for automatic `direnv` activation (no manual `nix develop` needed)
   - Consider adding `wrangler` to the flake's `buildInputs` instead of relying on the project-local one
-- [ ] **Fix dev env DEPLOY_URL**: Actual workers.dev URL is `pb-dev.i-jimenezpi.workers.dev` but `DEPLOY_URL` says `pb-dev.ignaciojimenez.workers.dev` — update `wrangler.toml` to match
-- [ ] **Remove custom domain from dev env**: The `[env.dev]` deployment inherited the production `curlbin.ignacio.systems` route — dev should only use `workers_dev = true` with no custom domain
+- [ ] **Submit upstream PR for headless mode**: Branch `feat/headless-mode` is ready. Deployed to production on curlbin.ignacio.systems — soak-test for a reasonable period before opening the PR to `SharzyL/pastebin-worker`.
+- [ ] **Enable auth on production**: Follow `docs/auth-migration.md` checklist after migrating backup clients
 
 ## Medium Priority
 
-- [ ] **Submit upstream PR for headless mode**: Branch `feat/headless-mode` is ready — create PR to `SharzyL/pastebin-worker`
-- [ ] **Enable auth on production**: Follow `docs/auth-migration.md` checklist after migrating backup clients
 - [ ] **Switch `genRandStr()` to `crypto.getRandomValues()`**: `worker/common.ts:37` uses `Math.random()` — good standalone upstream PR
 
 ## Low Priority
