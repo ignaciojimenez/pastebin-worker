@@ -86,17 +86,18 @@ HEADLESS_MODE = true
 [env.dev]
 workers_dev = true
 name = "pb-dev"
+routes = []  # no custom domain — workers.dev URL only
 
 [[env.dev.kv_namespaces]]
 binding = "PB"
-id = "<DEV_KV_NAMESPACE_ID>"  # run: wrangler kv namespace create PB --env dev
+id = "c15d47225a904c638793c10b37c0a2ac"  # run: wrangler kv namespace create PB --env dev
 
 [[env.dev.r2_buckets]]
 binding = "R2"
 bucket_name = "backups-dev"  # run: wrangler r2 bucket create backups-dev
 
 [env.dev.vars]
-DEPLOY_URL = "https://pb-dev.ignaciojimenez.workers.dev"
+DEPLOY_URL = "https://pb-dev.i-jimenezpi.workers.dev"
 REPO = "https://github.com/ignaciojimenez/pastebin-worker"
 INDEX_PAGE_TITLE = "Pastebin Worker (Dev)"
 TOS_MAINTAINER = "Ignacio"
