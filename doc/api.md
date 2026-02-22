@@ -285,6 +285,32 @@ $ curl -X PUT -Fc="kawaii~" https://shz.al/~hitagi:22@-OJWcTOH2jprTJWYadmDv
 }
 ```
 
+## Headless Mode
+
+Set `HEADLESS_MODE = true` in `wrangler.toml` for an API-only deployment. This replaces the React upload UI with a minimal landing page and disables non-essential routes:
+
+**Disabled routes:**
+- `GET /u/<name>` — URL redirect (returns 403)
+- `GET /a/<name>` — article/markdown rendering (returns 403)
+- `GET /<name>:<passwd>` — admin edit page (returns headless landing page)
+
+**Unaffected routes** (work identically with or without headless mode):
+- `POST /` — paste upload
+- `GET /<name>` — raw paste retrieval
+- `GET /d/<name>` — encrypted paste display page
+- `GET /m/<name>` — paste metadata
+- `PUT /<name>:<passwd>` — paste update
+- `DELETE /<name>:<passwd>` — paste deletion
+- `HEAD /*` — metadata via headers
+- `/api`, `/tos` — documentation pages
+- `/favicon.ico`, `/assets/*` — static assets
+
+**Configuration:**
+```toml
+[vars]
+HEADLESS_MODE = true
+```
+
 ## DELETE `/<name>:<passwd>`
 
 Delete the paste of name `<name>` and password `<passwd>`. It may take seconds to synchronize the deletion globally.

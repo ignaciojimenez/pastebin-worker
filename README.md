@@ -48,6 +48,10 @@ $ yarn deploy
 
 6. Enjoy!
 
+## Headless Mode
+
+For API-only deployments (no upload UI), set `HEADLESS_MODE = true` in `wrangler.toml`. The index page becomes a minimal landing page with usage instructions, and URL redirect (`/u/`) and article rendering (`/a/`) routes are disabled. All paste CRUD operations continue to work normally via the HTTP API. See [API reference](doc/api.md#headless-mode) for details.
+
 ## Auth
 
 If you want a private deployment (only you can upload paste, but everyone can read the paste), add the following entry to your `wrangler.toml`.
