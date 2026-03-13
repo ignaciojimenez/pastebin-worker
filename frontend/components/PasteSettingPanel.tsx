@@ -101,13 +101,13 @@ export function PanelSettingsPanel({ setting, onSettingChange, config, ...rest }
               errorMessage={verifyName(setting.name)[1]}
               startContent={
                 <div className="pointer-events-none flex items-center">
-                  <span className="text-default-500 text-small w-max">{`${config.DEPLOY_URL}/~`}</span>
+                  <span className="text-default-500 text-sm w-max">{`${config.DEPLOY_URL}/~`}</span>
                 </div>
               }
             />
           ) : null}
           <Radio value="manage" classNames={radioClassNames}>
-            <div className="">Update or delete</div>
+            <div className="">Update or delete an existing paste</div>
           </Radio>
           {setting.uploadKind === "manage" ? (
             <Input

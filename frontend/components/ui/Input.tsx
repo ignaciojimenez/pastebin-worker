@@ -56,16 +56,18 @@ export function Input({
           {isRequired && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="relative flex items-center">
-        {startContent && <div className="absolute left-3 z-10">{startContent}</div>}
+      <div
+        className={`flex items-center bg-default-100 border rounded-xl ${borderColor} ${startContent || endContent ? "px-3" : ""}`}
+      >
+        {startContent && <div className="flex-shrink-0">{startContent}</div>}
         <input
           aria-label={label}
           aria-invalid={isInvalid}
-          className={`w-full px-3 py-2 bg-default-100 border rounded-xl text-sm text-foreground transition-colors focus:outline-none ${borderColor} ${startContent ? "pl-10" : ""} ${endContent ? "pr-10" : ""} ${classNames.input || ""}`}
+          className={`flex-1 py-2 bg-transparent text-sm text-foreground focus:outline-none ${startContent || endContent ? "" : "px-3"} ${classNames.input || ""}`}
           onChange={handleChange}
           {...rest}
         />
-        {endContent && <div className="absolute right-1 z-10">{endContent}</div>}
+        {endContent && <div className="flex-shrink-0">{endContent}</div>}
       </div>
       {(description || errorMessage) && (
         <div
