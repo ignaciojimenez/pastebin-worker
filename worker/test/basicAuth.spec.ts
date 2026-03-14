@@ -79,6 +79,12 @@ describe("basic auth", () => {
     expect(await areBlobsEqual(await revisitUpdatedResp.blob(), blob2)).toStrictEqual(true)
   })
 
+  it("should allow accessing doc pages without auth", async () => {
+    for (const page of ["/api", "/tos"]) {
+      expect((await workerFetch(ctx, `${BASE_URL}${page}`)).status, `visiting ${page}`).toStrictEqual(200)
+    }
+  })
+
   it("should delete without auth", async () => {
     const uploadResp1 = await upload(ctx, { c: blob1 }, { headers: authHeader })
     const deleteResp = await workerFetch(
