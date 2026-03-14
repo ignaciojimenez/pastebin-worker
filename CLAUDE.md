@@ -13,10 +13,10 @@ Fork of [SharzyL/pastebin-worker](https://github.com/SharzyL/pastebin-worker) de
 ## Development Environment
 
 This project uses a **Nix flake** (`flake.nix`) for reproducible dev environments.
-All commands must be run inside the Nix dev shell — without it, `yarn`, `node`, etc. are not available.
+All commands must be run inside the Nix dev shell — without it, `pnpm`, `node`, etc. are not available.
 
 ```bash
-nix develop             # enter dev shell (provides node, yarn)
+nix develop             # enter dev shell (provides node, pnpm)
 ```
 
 **All commands below assume you are inside `nix develop` or prefixed with `nix develop --command`.**
@@ -24,14 +24,14 @@ nix develop             # enter dev shell (provides node, yarn)
 ## Commands
 
 ```bash
-yarn install            # install dependencies
-yarn build:frontend     # build React frontend
-yarn dev                # local dev server on :8787
-yarn test               # run tests
-yarn lint               # ESLint check
-yarn fmt                # Prettier format
-yarn deploy             # deploy to production
-yarn deploy:dev         # deploy to dev preview
+pnpm install            # install dependencies
+pnpm build:frontend     # build React frontend
+pnpm dev                # local dev server on :8787
+pnpm test               # run tests
+pnpm lint               # ESLint check
+pnpm fmt                # Prettier format
+pnpm run deploy         # deploy to production (note: must use `run` — pnpm has a built-in deploy)
+pnpm run deploy:dev     # deploy to dev preview
 ```
 
 ## Branch Strategy

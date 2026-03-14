@@ -15,18 +15,18 @@ This project supports a reproducible development environment using [Nix flakes](
    ```sh
    nix develop
    ```
-   This will provide you with `nodejs` and `yarn` in a reproducible environment—no need to install anything globally.
+   This will provide you with `nodejs` and `pnpm` in a reproducible environment—no need to install anything globally.
 3. **Install project dependencies:**
    ```sh
-   yarn install
+   pnpm install
    ```
 4. **Login to Cloudflare and deploy:**
    ```sh
-   yarn wrangler login
-   yarn deploy
+   pnpm wrangler login
+   pnpm run deploy
    ```
 
-You can use all yarn-based commands as described in the upstream README. If you want to use additional tools, add them to the Nix shell or use yarn add as needed.
+You can use all pnpm-based commands as described in the upstream README. If you want to use additional tools, add them to the Nix shell or use `pnpm add` as needed.
 
 ---
 

@@ -25,7 +25,7 @@ node scripts/bcrypt.js
 # ignacio = "$2b$08$<hash>"
 
 # Deploy to dev
-yarn deploy:dev
+pnpm run deploy:dev
 
 # Test upload with auth
 curl -u ignacio:yourpassword -Fc=@testfile.txt https://pb-dev.ignaciojimenez.workers.dev/
@@ -67,7 +67,7 @@ node scripts/bcrypt.js
 # ignacio = "$2b$08$<hash>"
 
 # Deploy
-yarn deploy
+pnpm run deploy
 ```
 
 ### 4. Verify
