@@ -13,7 +13,7 @@
         in pkgs.mkShell {
           buildInputs = [
             pkgs.nodejs_latest
-            pkgs.nodePackages.yarn
+            pkgs.nodePackages.pnpm
           ];
         };
       };
@@ -23,7 +23,7 @@
         in pkgs.mkShell {
           buildInputs = [
             pkgs.nodejs_latest
-            pkgs.nodePackages.yarn
+            pkgs.nodePackages.pnpm
           ];
         };
       };
