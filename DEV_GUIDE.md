@@ -1,43 +1,22 @@
-# Development Guide for pastebin-worker (Fork)
+# Dev Guide (Fork-specific)
 
-This guide is for contributors and users of this fork who want a reproducible development environment using Nix, as well as other fork-specific instructions.
+This fork uses a [Nix flake](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html) for a reproducible dev environment. All commands run inside the Nix shell.
 
----
+## Getting Started
 
-## Development with Nix (Reproducible Environment)
+```sh
+nix develop          # enter dev shell (provides node, pnpm)
+pnpm install         # install dependencies
+```
 
-This project supports a reproducible development environment using [Nix flakes](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html).
+## Deploy
 
-### Getting Started
+```sh
+pnpm wrangler login
+pnpm run deploy      # production (note: must use 'run' — pnpm has a built-in deploy command)
+pnpm run deploy:dev  # dev preview
+```
 
-1. **Install [Nix](https://nixos.org/download.html)** (with flakes enabled).
-2. **Enter the development shell:**
-   ```sh
-   nix develop
-   ```
-   This will provide you with `nodejs` and `pnpm` in a reproducible environment—no need to install anything globally.
-3. **Install project dependencies:**
-   ```sh
-   pnpm install
-   ```
-4. **Login to Cloudflare and deploy:**
-   ```sh
-   pnpm wrangler login
-   pnpm run deploy
-   ```
+## Upstream PRs
 
-You can use all pnpm-based commands as described in the upstream README. If you want to use additional tools, add them to the Nix shell or use `pnpm add` as needed.
-
----
-
-## Contributing Upstream
-
-- Please avoid including Nix-specific files (like `flake.nix`, `flake.lock`, or this guide) in PRs to the upstream repository unless they are relevant to all users.
-- Keep your fork-specific documentation and tooling in separate branches or files as needed.
-
----
-
-## Fork-specific Notes
-
-- The upstream README and demo links may not apply to this fork. Refer to this guide for development and reproducibility instructions.
-- If you have suggestions for improving the development workflow, feel free to update this guide!
+Keep Nix-specific files (`flake.nix`, `flake.lock`, this guide, `docs/`) out of upstream PRs — branch off `goshujin` for clean patches.
