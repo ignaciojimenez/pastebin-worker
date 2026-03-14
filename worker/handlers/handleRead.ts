@@ -144,11 +144,6 @@ ${DARK_MODE_SCRIPT}
 
   const staticPageContent = getDocPage(url.pathname, env)
   if (staticPageContent) {
-    // access to all static pages requires auth
-    const authResponse = verifyAuth(request, env)
-    if (authResponse !== null) {
-      return authResponse
-    }
     return new Response(staticPageContent, {
       headers: {
         "Content-Type": "text/html;charset=UTF-8",
