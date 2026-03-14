@@ -37,7 +37,7 @@ pnpm run deploy:dev     # deploy to dev preview
 ## Branch Strategy
 
 - `goshujin` — tracks upstream `SharzyL/pastebin-worker:goshujin`
-- `nix-dev` — personal deployment branch (production)
+- `main` — personal deployment branch (production)
 - Upstream PRs branch off `goshujin` (e.g. `feat/headless-mode`)
 - Remote `upstream` points to `https://github.com/SharzyL/pastebin-worker.git`
 
