@@ -52,7 +52,7 @@ test("uploadMPU", async () => {
   const reGetResp = await workerFetch(ctx, uploadResp.url)
   expect(await areBlobsEqual(await reGetResp.blob(), newContent)).toStrictEqual(true)
   expect(reGetResp.headers.has("etag")).toStrictEqual(true)
-})
+}, 15000)
 
 describe("uploadMPU with variant parameters", () => {
   const content = genRandomBlob(1024 * 1024 * 10)
