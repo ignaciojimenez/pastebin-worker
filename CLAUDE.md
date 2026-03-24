@@ -36,7 +36,10 @@ pnpm run deploy:dev     # deploy to dev preview
 
 ## Deployment
 
-Production deployment from `main` is **manual** (CI only auto-deploys `goshujin` for upstream):
+Pushing to `main` triggers CI auto-deploy to production (`curlbin.ignacio.systems`).
+CI runs: install → build frontend → fmt/lint/test → `wrangler deploy`.
+
+For manual deploy (e.g. urgent fixes before CI completes):
 
 ```bash
 pnpm install              # install dependencies
