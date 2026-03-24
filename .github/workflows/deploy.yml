@@ -2,7 +2,7 @@ name: Test and Deploy
 on:
   push:
     branches:
-      - goshujin
+      - main
 
 jobs:
   deploy:

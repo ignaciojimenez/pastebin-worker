@@ -34,10 +34,24 @@ pnpm run deploy         # deploy to production (note: must use `run` — pnpm ha
 pnpm run deploy:dev     # deploy to dev preview
 ```
 
+## Deployment
+
+Production deployment from `main` is **manual** (CI only auto-deploys `goshujin` for upstream):
+
+```bash
+pnpm install              # install dependencies
+pnpm build:frontend       # REQUIRED — builds React frontend into dist/
+pnpm run deploy           # deploy to production (curlbin.ignacio.systems)
+pnpm run deploy:dev       # deploy to dev preview (pb-dev.i-jimenezpi.workers.dev)
+```
+
+The frontend build step is critical — without it, the worker serves missing/stale assets.
+Use `pnpm run deploy` (not `pnpm deploy`, which is a built-in pnpm workspace command).
+
 ## Branch Strategy
 
-- `goshujin` — tracks upstream `SharzyL/pastebin-worker:goshujin`
-- `main` — personal deployment branch (production)
+- `goshujin` — tracks upstream `SharzyL/pastebin-worker:goshujin` (CI auto-deploys on push)
+- `main` — personal deployment branch (production, manual deploy via `pnpm run deploy`)
 - Upstream PRs branch off `goshujin` (e.g. `feat/headless-mode`)
 - Remote `upstream` points to `https://github.com/SharzyL/pastebin-worker.git`
 
