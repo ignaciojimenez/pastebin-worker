@@ -24,13 +24,18 @@ export function decodeBasicAuth(encodedString: string): {
 // return null if auth passes or is not required,
 // return auth page if auth is required
 // throw WorkerError if auth failed
-// TODO: only allow hashed passwd
 export function verifyAuth(request: Request, env: Env): Response | null {
   // pass auth if 'BASIC_AUTH' is not present
   const basic_auth = env.BASIC_AUTH as Record<string, string>
-  const auth_entries = Object.entries(basic_auth)
+  const auth_entries = Object.entries(basic_auth || {})
 
-  const passwdMap = new Map<string, string>(auth_entries)
+  const passwdMap = new Map<string, string>()
+  for (const [user, hash] of auth_entries) {
+    if (!hash.startsWith("$2")) {
+      throw new WorkerError(500, `Configuration Error: Password for user '${user}' is not a valid bcrypt hash. Only hashed passwords are allowed.`)
+    }
+    passwdMap.set(user, hash)
+  }
 
   // pass auth if 'BASIC_AUTH' is empty
   if (passwdMap.size === 0) return null
