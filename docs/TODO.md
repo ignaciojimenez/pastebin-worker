@@ -2,7 +2,6 @@
 
 ## High Priority
 
-- [ ] **Submit upstream PR for headless mode**: Branch `feat/headless-mode` is ready. Deployed to production on curlbin.ignacio.systems — soak-test for a reasonable period before opening the PR to `SharzyL/pastebin-worker`.
 - [ ] **Fix Nix flake for seamless dev onboarding**: Improve so entering the project directory is zero-friction:
   - Add `shellHook` to run `pnpm install --frozen-lockfile` if `node_modules` is stale
   - Add `.envrc` with `use flake` for automatic `direnv` activation (no manual `nix develop` needed)
@@ -10,7 +9,7 @@
 
 ## Medium Priority
 
-- [ ] **Switch `genRandStr()` to `crypto.getRandomValues()`**: `worker/common.ts:37` uses `Math.random()` — good standalone upstream PR
+- [x] **Switch `genRandStr()` to `crypto.getRandomValues()`**: `worker/common.ts:37` uses `Math.random()` — good standalone upstream PR
 
 ## Low Priority
 
