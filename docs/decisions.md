@@ -7,3 +7,6 @@
 - **Rebase over merge**: Rebuilt `main` as clean commits on top of goshujin. Easier to maintain and rebase on future upstream syncs.
 - **Dev preview env**: Separate `[env.dev]` in wrangler.toml with ephemeral KV/R2 for safe testing before production deploys.
 - **Nix dev shell**: All build tooling (node, pnpm) provided via `flake.nix` for reproducible dev environment across machines.
+- **direnv + `.envrc`**: Auto-activates Nix shell on `cd` into project. No manual `nix develop` needed. Requires one-time `direnv allow`.
+- **flake-utils**: Replaced per-platform boilerplate in `flake.nix` with `flake-utils.lib.eachDefaultSystem` — covers x86_64 and aarch64 for both Linux and macOS.
+- **wrangler stays project-local**: Wrangler provided via pnpm devDependency, not Nix. Nix nixpkgs lags behind Cloudflare releases; project-local ensures version consistency with `package.json`.
