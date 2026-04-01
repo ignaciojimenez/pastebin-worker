@@ -12,14 +12,17 @@ Fork of [SharzyL/pastebin-worker](https://github.com/SharzyL/pastebin-worker) de
 
 ## Development Environment
 
-This project uses a **Nix flake** (`flake.nix`) for reproducible dev environments.
-All commands must be run inside the Nix dev shell — without it, `pnpm`, `node`, etc. are not available.
+This project uses a **Nix flake** (`flake.nix`) + **direnv** (`.envrc`) for reproducible dev environments.
+With direnv installed, entering the project directory auto-activates the Nix shell — no manual steps needed.
 
+First-time setup: `direnv allow` in the project root.
+
+Fallback (without direnv):
 ```bash
 nix develop             # enter dev shell (provides node, pnpm)
 ```
 
-**All commands below assume you are inside `nix develop` or prefixed with `nix develop --command`.**
+The shell hook auto-runs `pnpm install --frozen-lockfile` when `node_modules` is stale.
 
 ## Commands
 
@@ -76,7 +79,7 @@ Scope examples: `[frontend]`, `[worker]`, `[ci]`
 
 - `CLAUDE.md`
 - `DEV_GUIDE.md`
-- `flake.nix`, `flake.lock`
+- `flake.nix`, `flake.lock`, `.envrc`
 - `favicon.ico` (personal)
 - `docs/` directory (fork documentation)
 - Personal values in `wrangler.toml` (routes, KV IDs, R2 bucket names, env vars)

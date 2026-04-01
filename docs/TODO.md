@@ -2,10 +2,7 @@
 
 ## High Priority
 
-- [ ] **Fix Nix flake for seamless dev onboarding**: Improve so entering the project directory is zero-friction:
-  - Add `shellHook` to run `pnpm install --frozen-lockfile` if `node_modules` is stale
-  - Add `.envrc` with `use flake` for automatic `direnv` activation (no manual `nix develop` needed)
-  - Consider adding `wrangler` to the flake's `buildInputs` instead of relying on the project-local one
+- [x] **Fix Nix flake for seamless dev onboarding**: Improved — `flake-utils` for multi-platform, `shellHook` auto-installs deps, `.envrc` for direnv activation. Wrangler kept project-local (Nix lags behind CF releases).
 
 ## Medium Priority
 
