@@ -16,7 +16,7 @@
         in {
           default = pkgs.mkShell {
             buildInputs = [
-              pkgs.nodejs_latest
+              pkgs.nodejs_22
               pkgs.pnpm
             ];
 
