@@ -8,5 +8,7 @@
 - **Dev preview env**: Separate `[env.dev]` in wrangler.toml with ephemeral KV/R2 for safe testing before production deploys.
 - **Nix dev shell**: All build tooling (node, pnpm) provided via `flake.nix` for reproducible dev environment across machines.
 - **direnv + `.envrc`**: Auto-activates Nix shell on `cd` into project. No manual `nix develop` needed. Requires one-time `direnv allow`.
-- **flake-utils**: Replaced per-platform boilerplate in `flake.nix` with `flake-utils.lib.eachDefaultSystem` — covers x86_64 and aarch64 for both Linux and macOS.
+- **flake-utils**: Replaced per-platform boilerplate in `flake.nix` with `nixpkgs.lib.genAttrs` — covers x86_64 and aarch64 for both Linux and macOS.
 - **wrangler stays project-local**: Wrangler provided via pnpm devDependency, not Nix. Nix nixpkgs lags behind Cloudflare releases; project-local ensures version consistency with `package.json`.
+- **Node.js pinned to LTS 22**: Using `nodejs_22` instead of `nodejs_latest` to avoid surprise breakage from major Node version bumps (e.g. Node 25 broke happy-dom `localStorage` in tests).
+- **Renovate with 30-day release age**: Dependencies only auto-updated after versions have been published for 30 days. Supply chain attack mitigation — gives time for compromised packages to be detected and reverted. Major version bumps require manual dashboard approval.
