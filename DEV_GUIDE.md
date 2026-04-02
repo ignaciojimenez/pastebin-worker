@@ -13,6 +13,7 @@ cd pastebin-worker    # direnv activates the Nix shell, runs pnpm install if sta
 ```
 
 First-time setup (one-time):
+
 ```sh
 direnv allow           # trust this project's .envrc
 ```

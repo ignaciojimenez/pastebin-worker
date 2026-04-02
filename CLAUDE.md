@@ -18,6 +18,7 @@ With direnv installed, entering the project directory auto-activates the Nix she
 First-time setup: `direnv allow` in the project root.
 
 Fallback (without direnv):
+
 ```bash
 nix develop             # enter dev shell (provides node, pnpm)
 ```

@@ -32,7 +32,10 @@ export function verifyAuth(request: Request, env: Env): Response | null {
   const passwdMap = new Map<string, string>()
   for (const [user, hash] of auth_entries) {
     if (!hash.startsWith("$2")) {
-      throw new WorkerError(500, `Configuration Error: Password for user '${user}' is not a valid bcrypt hash. Only hashed passwords are allowed.`)
+      throw new WorkerError(
+        500,
+        `Configuration Error: Password for user '${user}' is not a valid bcrypt hash. Only hashed passwords are allowed.`,
+      )
     }
     passwdMap.set(user, hash)
   }
