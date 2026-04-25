@@ -1,6 +1,12 @@
 import { expect, test } from "vitest"
 import type { ParsedPath } from "../parsers.js"
-import { parsePath, parseFilenameFromContentDisposition, parseExpiration, parseExpirationReadable } from "../parsers.js"
+import {
+  parsePath,
+  ParseError,
+  parseFilenameFromContentDisposition,
+  parseExpiration,
+  parseExpirationReadable,
+} from "../parsers.js"
 
 test("parsePath", () => {
   const testPairs: [string, ParsedPath][] = [
@@ -28,6 +34,13 @@ test("parsePath", () => {
     expect(parsed.password, `checking passwd of ${input}`).toStrictEqual(output.password)
     expect(parsed.ext, `checking ext of ${input}`).toStrictEqual(output.ext)
     expect(parsed.filename, `checking filename of ${input}`).toStrictEqual(output.filename)
+  }
+})
+
+test("parsePath throws on empty name", () => {
+  const emptyNamePaths = ["/", "/.well-known/", "/.jpg"]
+  for (const input of emptyNamePaths) {
+    expect(() => parsePath(input), `should throw for ${input}`).toThrow(ParseError)
   }
 })
 

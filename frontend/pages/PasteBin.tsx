@@ -12,6 +12,7 @@ import { PasteInputPanel } from "../components/PasteInputPanel.js"
 
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
+import { PASSWD_SEP } from "../../shared/constants.js"
 
 import { verifyExpiration, verifyManageUrl, verifyName, getMaxExpirationReadable } from "../utils/utils.js"
 import { uploadPaste } from "../utils/uploader.js"
@@ -55,6 +56,7 @@ export function PasteBin({ config }: { config: Env }) {
     // TODO: do not fetch paste for a large file paste
     const pathname = location.pathname
     // const pathname = new URL("http://localhost:8787/ds2W:ShNkSKdf5rZypdcJEcAdFmw3").pathname
+    if (!pathname.includes(PASSWD_SEP)) return
     const { name, password, filename, ext } = parsePath(pathname)
 
     if (password !== undefined && pasteSetting.manageUrl === "") {

@@ -1,5 +1,11 @@
 import { PASSWD_SEP } from "./constants.js"
 
+export class ParseError extends Error {
+  constructor(msg: string) {
+    super(msg)
+  }
+}
+
 export function parseSize(sizeStr: string): number | null {
   sizeStr = sizeStr.trim()
   const EXPIRE_REGEX = /^[\d.]+\s*[KMG]?$/
@@ -104,6 +110,11 @@ export function parsePath(pathname: string): ParsedPath {
     short = pathname.slice(0, endOfShort)
     passwd = pathname.slice(endOfShort + 1)
   }
+
+  if (!short) {
+    throw new ParseError(`invalid path: paste name is empty`)
+  }
+
   return { role, name: short, password: passwd, ext, filename }
 }
 
