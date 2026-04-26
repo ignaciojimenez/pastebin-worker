@@ -252,16 +252,8 @@ export async function deletePaste(env: Env, pasteName: string, originalMetadata:
 export async function cleanExpiredInR2(env: Env, controller: ScheduledController) {
   const nowUnix = controller.scheduledTime / 1000
 
-  let numCleaned = 0
+  // phase 1: collect all expired keys
   const toDelete: string[] = []
-
-  async function flush() {
-    if (toDelete.length > 0) {
-      await env.R2.delete(toDelete)
-      numCleaned += toDelete.length
-      toDelete.length = 0
-    }
-  }
 
   let cursor: string | undefined
   while (true) {
@@ -289,17 +281,20 @@ export async function cleanExpiredInR2(env: Env, controller: ScheduledController
       }
     }
 
-    if (toDelete.length >= 1000) {
-      await flush()
-    }
-
     if (listed.truncated) {
       cursor = listed.cursor
     } else {
       break
     }
   }
-  await flush()
+
+  // phase 2: batch delete in chunks of 1000
+  let numCleaned = 0
+  for (let i = 0; i < toDelete.length; i += 1000) {
+    const batch = toDelete.slice(i, i + 1000)
+    await env.R2.delete(batch)
+    numCleaned += batch.length
+  }
 
   console.log(`${numCleaned} R2 objects cleaned`)
 }
