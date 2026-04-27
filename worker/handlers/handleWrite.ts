@@ -50,7 +50,7 @@ async function multipartToMap(req: Request, sizeLimit: number): Promise<Map<stri
     if (err instanceof MaxFileSizeExceededError) {
       throw new WorkerError(413, `payload too large (max ${sizeLimit} bytes allowed)`)
     } else if (err instanceof MultipartParseError) {
-      console.error(err)
+      console.warn("Failed to parse multipart request:", err.message)
       throw new WorkerError(400, "Failed to parse multipart request")
     } else {
       throw err
