@@ -51,17 +51,29 @@ export function PasteInputPanel({ isPasteLoading, state, onStateChange, ...rest 
   return (
     <Card aria-label="Pastebin editor panel" classNames={cardOverrides} {...rest}>
       <CardBody className={"relative"}>
+        <input
+          type="file"
+          ref={fileInput}
+          className="hidden"
+          onChange={(e) => {
+            const files = e.target.files
+            if (files?.length) {
+              setFile(files[0])
+            }
+          }}
+        />
         <Tabs
           variant="underlined"
           classNames={{
             tabList: `gap-2 w-full py-0 border-divider mb-2 -ml-1`,
-            cursor: `w-[80%] ${tst}`,
+            cursor: tst,
             tab: `max-w-fit px-2 h-8 px-2`,
             panel: "pb-1",
           }}
           selectedKey={state.editKind}
           onSelectionChange={(k) => {
             onStateChange({ ...state, editKind: k as EditKind })
+            if (k === "file") fileInput.current?.click()
           }}
         >
           {/*Possibly a bug of chrome, but Tab sometimes has a transient unexpected scrollbar when resizing*/}
@@ -124,17 +136,6 @@ export function PasteInputPanel({ isPasteLoading, state, onStateChange, ...rest 
               }}
               onClick={() => fileInput.current?.click()}
             >
-              <input
-                type="file"
-                ref={fileInput}
-                className="hidden"
-                onChange={(e) => {
-                  const files = e.target.files
-                  if (files?.length) {
-                    setFile(files[0])
-                  }
-                }}
-              />
               <div className="text-2xl my-2 font-bold px-4 text-center break-all">
                 {state.file !== null ? state.file.name : "Select File"}
               </div>
