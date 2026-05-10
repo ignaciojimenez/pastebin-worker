@@ -3,6 +3,10 @@ import { parseExpiration, parseExpirationReadable } from "./parsers.js"
 
 export type VerifyResult = [ok: true, message: string] | [ok: false, error: string]
 
+export function isLegalUrl(url: string): boolean {
+  return URL.canParse(url)
+}
+
 export function verifyPassword(password: string): VerifyResult {
   if (password === "") {
     return [true, ""]

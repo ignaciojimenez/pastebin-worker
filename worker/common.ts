@@ -47,10 +47,6 @@ export function genRandStr(len: number) {
   return str
 }
 
-export function isLegalUrl(url: string): boolean {
-  return URL.canParse(url)
-}
-
 // Workers extension to SubtleCrypto, mirrored from worker-configuration.d.ts.
 // DOM lib's SubtleCrypto interface (from tsconfig "lib": ["dom"]) lacks this
 // method, and the class declaration in worker-configuration.d.ts doesn't merge

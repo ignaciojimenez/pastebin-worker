@@ -1,4 +1,5 @@
-import { decode, isLegalUrl, WorkerError, escapeHtml } from "../common.js"
+import { decode, WorkerError, escapeHtml } from "../common.js"
+import { isLegalUrl } from "../../shared/verify.js"
 import { getDocMarkdown, getCurlIndexMarkdown, renderDocAsHtml } from "../pages/docs.js"
 import { verifyAuth } from "../pages/auth.js"
 import mime from "mime"
