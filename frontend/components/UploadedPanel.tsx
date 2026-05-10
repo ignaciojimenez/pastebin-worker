@@ -14,6 +14,8 @@ interface UploadedPanelProps extends CardProps {
   loadingProgress?: number
   pasteResponse?: PasteResponse
   encryptionKey?: string
+  highlightLang?: string
+  isUrlPaste?: boolean
 }
 
 function withPathPrefix(url: string, prefix: string): string {
@@ -80,6 +82,8 @@ export function UploadedPanel({
   pasteResponse,
   className,
   encryptionKey,
+  highlightLang,
+  isUrlPaste,
   ...rest
 }: UploadedPanelProps) {
   const copyWidgetClassNames = `${tst}`
@@ -88,6 +92,9 @@ export function UploadedPanel({
     className: "mb-2",
   }
   const [moreOpen, setMoreOpen] = useState<boolean>(false)
+
+  const isEncrypted = Boolean(encryptionKey)
+  const isMarkdown = highlightLang === "markdown"
 
   const urlInput = (label: string, value: string, labelExtra?: React.ReactNode) => (
     <Input
@@ -98,6 +105,13 @@ export function UploadedPanel({
       endContent={<CopyWidget className={copyWidgetClassNames} getCopyContent={() => value} />}
     />
   )
+
+  const markdownUrlField = (pasteResponse: PasteResponse) =>
+    urlInput(
+      "Markdown URL",
+      withPathPrefix(pasteResponse.url, "/a"),
+      <InfoTooltip>Render the paste as GitHub-flavored markdown (with code highlighting and LaTeX).</InfoTooltip>,
+    )
 
   return (
     <Card classNames={mergeClasses({ base: tst }, { base: className })} {...rest}>
@@ -145,6 +159,7 @@ export function UploadedPanel({
                   />
                 }
               />
+              {isMarkdown && !isEncrypted && markdownUrlField(pasteResponse)}
               {urlInput(
                 "Raw URL",
                 pasteResponse.url,
@@ -180,18 +195,14 @@ export function UploadedPanel({
 
               {moreOpen && (
                 <div id="uploaded-paste-more">
-                  {urlInput(
-                    "Markdown URL",
-                    withPathPrefix(pasteResponse.url, "/a"),
-                    <InfoTooltip>
-                      Render the paste as GitHub-flavored markdown (with code highlighting and LaTeX).
-                    </InfoTooltip>,
-                  )}
-                  {urlInput(
-                    "Shortener URL",
-                    withPathPrefix(pasteResponse.url, "/u"),
-                    <InfoTooltip>If the paste body is a URL, this endpoint redirects (302) to it.</InfoTooltip>,
-                  )}
+                  {!isEncrypted && !isMarkdown && markdownUrlField(pasteResponse)}
+                  {!isEncrypted &&
+                    isUrlPaste &&
+                    urlInput(
+                      "Shortener URL",
+                      withPathPrefix(pasteResponse.url, "/u"),
+                      <InfoTooltip>The paste body is a URL — this endpoint redirects (302) to it.</InfoTooltip>,
+                    )}
                   {urlInput(
                     "Metadata URL",
                     withPathPrefix(pasteResponse.url, "/m"),

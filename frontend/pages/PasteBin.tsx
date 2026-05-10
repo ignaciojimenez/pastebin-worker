@@ -12,10 +12,10 @@ import { PasteInputPanel } from "../components/PasteInputPanel.js"
 
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
-import { PASSWD_SEP } from "../../shared/constants.js"
+import { PASSWD_SEP, MAX_URL_REDIRECT_LEN } from "../../shared/constants.js"
 
 import { verifyExpiration, verifyManageUrl, getMaxExpirationReadable } from "../utils/utils.js"
-import { verifyName, verifyPassword } from "../../shared/verify.js"
+import { verifyName, verifyPassword, isLegalUrl } from "../../shared/verify.js"
 import { useNameAvailability } from "../utils/useNameAvailability.js"
 import { uploadPaste } from "../utils/uploader.js"
 import { tst } from "../utils/overrides.js"
@@ -274,6 +274,13 @@ export function PasteBin({ config }: { config: Env }) {
               loadingProgress={loadingProgress}
               pasteResponse={pasteResponse}
               encryptionKey={uploadedEncryptionKey}
+              highlightLang={editorState.editKind === "edit" ? editorState.editHighlightLang : undefined}
+              isUrlPaste={
+                editorState.editKind === "edit" &&
+                editorState.editContent.length > 0 &&
+                editorState.editContent.length <= MAX_URL_REDIRECT_LEN &&
+                isLegalUrl(editorState.editContent)
+              }
               className="w-full lg:w-1/2"
             />
           )}
