@@ -1,27 +1,29 @@
 import { defineConfig } from "vitest/config"
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config"
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers"
 
 export default defineConfig({
   test: {
     coverage: {
       provider: "istanbul", // v8 is not supported due for cf workers
       reporter: ["text", "json-summary", "html", "json"],
+      exclude: ["**/test/**"],
     },
     projects: [
-      defineWorkersProject({
+      defineConfig({
+        plugins: [
+          cloudflareTest({
+            wrangler: {
+              configPath: "./wrangler.toml",
+            },
+          }),
+        ],
         test: {
           name: "Workers",
           include: ["worker/test/**/*.spec.ts"],
           coverage: {
             provider: "istanbul", // v8 is not supported due for cf workers
             reporter: ["text", "json-summary", "html", "json"],
-          },
-          poolOptions: {
-            workers: {
-              wrangler: {
-                configPath: "./wrangler.toml",
-              },
-            },
+            exclude: ["**/test/**"],
           },
         },
       }),
@@ -34,6 +36,19 @@ export default defineConfig({
           coverage: {
             provider: "istanbul",
             reporter: ["text", "json-summary", "html", "json"],
+            exclude: ["**/test/**"],
+          },
+        },
+      },
+      {
+        test: {
+          include: ["shared/test/**/*.spec.ts"],
+          name: "Shared",
+          environment: "node",
+          coverage: {
+            provider: "istanbul",
+            reporter: ["text", "json-summary", "html", "json"],
+            exclude: ["**/test/**"],
           },
         },
       },

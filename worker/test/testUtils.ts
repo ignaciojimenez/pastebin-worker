@@ -9,7 +9,25 @@ import type { PasteResponse } from "../../shared/interfaces.js"
 export const BASE_URL: string = env.DEPLOY_URL
 export const RAND_NAME_REGEX = /^[ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678]+$/
 
-export const staticPages = ["", "index.html", "index", "tos", "tos.html", "api", "api.html", "favicon.ico"]
+export const staticPages = [
+  "",
+  "index.html",
+  "index",
+  "index.md",
+  "doc/tos",
+  "doc/tos.html",
+  "doc/tos.md",
+  "doc/api",
+  "doc/api.html",
+  "doc/api.md",
+  "doc/curl",
+  "doc/curl.html",
+  "doc/curl.md",
+  "doc/skill",
+  "doc/skill.html",
+  "doc/skill.md",
+  "favicon.ico",
+]
 
 type FormDataBuild = Record<string, string | Blob | { content: Blob; filename: string }>
 
@@ -87,7 +105,7 @@ export function createFormData(kv: FormDataBuild): FormData {
       fd.set(k, v, "") // fd.set automatically set filename to k, not what we desired
     } else {
       // hack for typing
-      const { content, filename } = v as { content: Blob; filename: string }
+      const { content, filename } = v
       fd.set(k, content, filename)
     }
   })

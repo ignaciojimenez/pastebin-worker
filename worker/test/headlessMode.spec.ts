@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, afterEach } from "vitest"
 import { createExecutionContext, env } from "cloudflare:test"
-import { addRole, BASE_URL, genRandomBlob, upload, workerFetch } from "./testUtils"
+import { addRole, BASE_URL, genRandomBlob, upload, workerFetch } from "./testUtils.js"
 
 describe("headless mode", () => {
   const ctx = createExecutionContext()

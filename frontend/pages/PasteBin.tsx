@@ -1,6 +1,6 @@
 import { useEffect, useState, useTransition } from "react"
 
-import { Button, Link } from "../components/ui/index.js"
+import { Link } from "../components/ui/index.js"
 
 import { DarkModeToggle, useDarkModeSelection } from "../components/DarkModeToggle.js"
 import { useErrorModal } from "../components/ErrorModal.js"
@@ -12,8 +12,11 @@ import { PasteInputPanel } from "../components/PasteInputPanel.js"
 
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
+import { PASSWD_SEP, MAX_URL_REDIRECT_LEN } from "../../shared/constants.js"
 
-import { verifyExpiration, verifyManageUrl, verifyName, getMaxExpirationReadable } from "../utils/utils.js"
+import { verifyExpiration, verifyManageUrl, getMaxExpirationReadable } from "../utils/utils.js"
+import { verifyName, verifyPassword, isLegalUrl } from "../../shared/verify.js"
+import { useNameAvailability } from "../utils/useNameAvailability.js"
 import { uploadPaste } from "../utils/uploader.js"
 import { tst } from "../utils/overrides.js"
 
@@ -47,6 +50,12 @@ export function PasteBin({ config }: { config: Env }) {
 
   const { ErrorModal, showModal, handleError, handleFailedResp } = useErrorModal()
 
+  const nameAvailability = useNameAvailability(
+    pasteSetting.name,
+    config.DEPLOY_URL,
+    pasteSetting.uploadKind === "custom",
+  )
+
   // handle admin URL
   useEffect(() => {
     // SSR environment check
@@ -55,6 +64,7 @@ export function PasteBin({ config }: { config: Env }) {
     // TODO: do not fetch paste for a large file paste
     const pathname = location.pathname
     // const pathname = new URL("http://localhost:8787/ds2W:ShNkSKdf5rZypdcJEcAdFmw3").pathname
+    if (!pathname.includes(PASSWD_SEP)) return
     const { name, password, filename, ext } = parsePath(pathname)
 
     if (password !== undefined && pasteSetting.manageUrl === "") {
@@ -146,11 +156,17 @@ export function PasteBin({ config }: { config: Env }) {
       return false
     }
 
+    if (!verifyPassword(pasteSetting.password)[0]) {
+      return false
+    }
+
     if (verifyExpiration(pasteSetting.expiration, config)[0]) {
       if (pasteSetting.uploadKind === "short" || pasteSetting.uploadKind === "long") {
         return true
       } else if (pasteSetting.uploadKind === "custom") {
-        return verifyName(pasteSetting.name)[0]
+        if (!verifyName(pasteSetting.name)[0]) return false
+        // Allow upload if available, or if availability check failed (server still validates).
+        return nameAvailability.status === "available" || nameAvailability.status === "error"
       } else if (pasteSetting.uploadKind === "manage") {
         return verifyManageUrl(pasteSetting.manageUrl, config)[0]
       } else {
@@ -166,16 +182,24 @@ export function PasteBin({ config }: { config: Env }) {
   }
 
   const info = (
-    <div className="mx-4 lg:mx-0">
+    <div className="mx-4 lg:px-4 lg:mx-0">
       <div className="mt-8 mb-4 flex items-center justify-between">
         <h1 className="text-3xl">{config.INDEX_PAGE_TITLE}</h1>
         <DarkModeToggle modeSelection={modeSelection} setModeSelection={setModeSelection} />
       </div>
-      <p className="my-2">An open source pastebin deployed on Cloudflare Workers. </p>
+      <p className="my-2">A pastebin running on Cloudflare Workers.</p>
       <p className="my-2">
-        <b>Usage</b>: Paste text or file here. Upload. Share it with a URL. Or access with our{" "}
-        <Link className={tst} href={`${config.DEPLOY_URL}/api`}>
-          APIs
+        <b>Usage</b>: paste text or drop a file, then share the returned URL. You can also use{" "}
+        <Link className={tst} href={`${config.DEPLOY_URL}/doc/curl`}>
+          curl
+        </Link>
+        {", the "}
+        <Link className={tst} href={`${config.DEPLOY_URL}/doc/api`}>
+          HTTP API
+        </Link>
+        {", or as an "}
+        <Link className={tst} href={`${config.DEPLOY_URL}/doc/skill.md`}>
+          AI agent skill
         </Link>
         .
       </p>
@@ -186,28 +210,35 @@ export function PasteBin({ config }: { config: Env }) {
     </div>
   )
 
+  const isManageMode = pasteSetting.uploadKind === "manage"
+  const uploadDisabled = !canUpload() || isUploadPending
+  const deleteDisabled = !canDelete()
+
+  const baseActionClass = `flex-1 py-3 text-center font-bold ${tst}`
+  const uploadClass =
+    `${baseActionClass} ${isManageMode ? "rounded-bl-2xl" : "rounded-b-2xl"} bg-primary-50 text-primary ` +
+    (uploadDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-primary-100")
+  const deleteClass =
+    `${baseActionClass} rounded-br-2xl bg-danger-50 text-danger ` +
+    (deleteDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-danger-100")
+
   const submitter = (
-    <div className="my-4 mx-2 lg:mx-0">
-      <Button
-        color="primary"
-        onPress={onStartUpload}
-        className={`mr-4 ${tst}`}
-        isDisabled={!canUpload() || isUploadPending}
-      >
-        {pasteSetting.uploadKind === "manage" ? "Update" : "Upload"}
-      </Button>
-      {pasteSetting.uploadKind === "manage" ? (
-        <Button color="danger" onPress={onStartDelete} className={tst} isDisabled={!canDelete()}>
+    <div className="flex flex-row items-stretch">
+      <button type="button" onClick={onStartUpload} disabled={uploadDisabled} className={uploadClass}>
+        {isManageMode ? "Update" : "Upload"}
+      </button>
+      {isManageMode && (
+        <button type="button" onClick={onStartDelete} disabled={deleteDisabled} className={deleteClass}>
           Delete
-        </Button>
-      ) : null}
+        </button>
+      )}
     </div>
   )
 
   const footer = (
     <footer className="px-3 my-4 text-center">
       <p>
-        <Link href={`${config.DEPLOY_URL}/tos`} className={`d-inline-block ${tst}`}>
+        <Link href={`${config.DEPLOY_URL}/doc/tos`} className={`d-inline-block ${tst}`}>
           Terms & Conditions
         </Link>
         {" / "}
@@ -228,12 +259,14 @@ export function PasteBin({ config }: { config: Env }) {
           onStateChange={setEditorState}
           className="mt-6 mb-4 mx-2 lg:mx-0"
         />
-        <div className="flex flex-col items-start lg:flex-row gap-6 mx-2 lg:mx-0">
+        <div className="flex flex-col items-start lg:flex-row gap-4 mx-2 lg:mx-0">
           <PanelSettingsPanel
             config={config}
             className={"transition-width lg:w-1/2 w-full"}
             setting={pasteSetting}
             onSettingChange={setPasteSetting}
+            nameAvailability={nameAvailability}
+            footer={submitter}
           />
           {(pasteResponse || isUploadPending) && (
             <UploadedPanel
@@ -241,11 +274,17 @@ export function PasteBin({ config }: { config: Env }) {
               loadingProgress={loadingProgress}
               pasteResponse={pasteResponse}
               encryptionKey={uploadedEncryptionKey}
+              highlightLang={editorState.editKind === "edit" ? editorState.editHighlightLang : undefined}
+              isUrlPaste={
+                editorState.editKind === "edit" &&
+                editorState.editContent.length > 0 &&
+                editorState.editContent.length <= MAX_URL_REDIRECT_LEN &&
+                isLegalUrl(editorState.editContent)
+              }
               className="w-full lg:w-1/2"
             />
           )}
         </div>
-        {submitter}
       </div>
       {footer}
       <ErrorModal />

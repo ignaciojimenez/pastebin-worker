@@ -6,7 +6,7 @@ import type { SerializedPasteData, MetaResponse } from "../../shared/interfaces.
 import { decode, escapeHtml } from "../common.js"
 import manifest from "../../dist/frontend/.vite/manifest.json"
 import chardet from "chardet"
-import { getAssetPaths, DARK_MODE_SCRIPT, MAX_SSR_FILE_SIZE, type Manifest } from "../ssrUtils.js"
+import { getAssetPaths, DARK_MODE_SCRIPT, MAX_SSR_FILE_SIZE } from "../ssrUtils.js"
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
@@ -38,6 +38,8 @@ async function streamToArrayBuffer(stream: ReadableStream<Uint8Array>): Promise<
 export async function renderDisplayPage(
   env: Env,
   name: string,
+  urlFilename: string | undefined,
+  urlExt: string | undefined,
   paste: ArrayBuffer | ReadableStream<Uint8Array>,
   metadata: PasteMetadata,
 ): Promise<string | null> {
@@ -79,7 +81,9 @@ export async function renderDisplayPage(
     guessedEncoding: encoding,
   }
 
-  const pasteFile = new File([content], metadata.filename || name)
+  const inferredFilename = urlFilename || (urlExt && name + urlExt) || metadata.filename || name
+  const pasteFile = new File([content], inferredFilename)
+  const titleName = name + (urlFilename ? "/" + urlFilename : urlExt ? urlExt : "")
 
   const config: Env = {
     DEPLOY_URL: env.DEPLOY_URL,
@@ -105,6 +109,8 @@ export async function renderDisplayPage(
       },
       isLoading: false,
       name,
+      ext: urlExt,
+      filename: urlFilename,
       config,
     }),
   )
@@ -118,7 +124,7 @@ export async function renderDisplayPage(
     html += decode(value.buffer as ArrayBuffer)
   }
 
-  const { jsFile, cssPath } = getAssetPaths(manifest as Manifest, "display.html")
+  const { jsFile, cssPath } = getAssetPaths(manifest, "display.html")
 
   return `<!doctype html>
 <html lang="en">
@@ -126,7 +132,7 @@ export async function renderDisplayPage(
 <meta charset="UTF-8" />
 <link rel="icon" href="/favicon.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${escapeHtml(env.INDEX_PAGE_TITLE)} / ${escapeHtml(name)}</title>
+<title>${escapeHtml(env.INDEX_PAGE_TITLE)} / ${escapeHtml(titleName)}</title>
 <link rel="stylesheet" href="/${cssPath}">
 <script>
 ${DARK_MODE_SCRIPT}

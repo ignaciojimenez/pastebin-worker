@@ -1,16 +1,9 @@
 import { verifyAuth } from "../pages/auth.js"
 import { decode, genRandStr, WorkerError, timingSafeEqual } from "../common.js"
 import { createPaste, getPasteMetadata, pasteNameAvailable, updatePaste } from "../storage/storage.js"
-import {
-  DEFAULT_PASSWD_LEN,
-  NAME_REGEX,
-  PASTE_NAME_LEN,
-  PRIVATE_PASTE_NAME_LEN,
-  PASSWD_SEP,
-  MIN_PASSWD_LEN,
-  MAX_PASSWD_LEN,
-} from "../../shared/constants.js"
+import { DEFAULT_PASSWD_LEN, PASTE_NAME_LEN, PRIVATE_PASTE_NAME_LEN, PASSWD_SEP } from "../../shared/constants.js"
 import { parsePath, parseSize, parseExpiration } from "../../shared/parsers.js"
+import { verifyName, verifyPassword } from "../../shared/verify.js"
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { MaxFileSizeExceededError, MultipartParseError, parseMultipartRequest } from "@mjackson/multipart-parser"
 import { handleMPUComplete, handleMPUCreate, handleMPUCreateUpdate, handleMPUResume } from "./handleMPU.js"
@@ -25,10 +18,10 @@ interface ParsedMultipartPart {
 async function multipartToMap(req: Request, sizeLimit: number): Promise<Map<string, ParsedMultipartPart>> {
   const partsMap = new Map<string, ParsedMultipartPart>()
   try {
-    await parseMultipartRequest(req, { maxFileSize: sizeLimit }, async (part) => {
+    for await (const part of parseMultipartRequest(req, { maxFileSize: sizeLimit })) {
       if (part.name) {
         if (part.isFile) {
-          const arrayBuffer = await part.arrayBuffer()
+          const arrayBuffer = part.arrayBuffer
           partsMap.set(part.name, {
             filename: part.filename,
             content: arrayBuffer,
@@ -36,7 +29,7 @@ async function multipartToMap(req: Request, sizeLimit: number): Promise<Map<stri
             contentAsString: () => decode(arrayBuffer),
           })
         } else {
-          const arrayBuffer = await part.arrayBuffer()
+          const arrayBuffer = part.arrayBuffer
           partsMap.set(part.name, {
             filename: part.filename,
             content: arrayBuffer,
@@ -45,12 +38,12 @@ async function multipartToMap(req: Request, sizeLimit: number): Promise<Map<stri
           })
         }
       }
-    })
+    }
   } catch (err) {
     if (err instanceof MaxFileSizeExceededError) {
       throw new WorkerError(413, `payload too large (max ${sizeLimit} bytes allowed)`)
     } else if (err instanceof MultipartParseError) {
-      console.error(err)
+      console.warn("Failed to parse multipart request:", err.message)
       throw new WorkerError(400, "Failed to parse multipart request")
     } else {
       throw err
@@ -77,11 +70,11 @@ export async function handlePostOrPut(
 
   let isMPUComplete = false
   if (url.pathname === "/mpu/create" && !isPut) {
-    return handleMPUCreate(request, env)
+    return await handleMPUCreate(request, env)
   } else if (url.pathname === "/mpu/create-update" && !isPut) {
-    return handleMPUCreateUpdate(request, env)
+    return await handleMPUCreateUpdate(request, env)
   } else if (url.pathname === "/mpu/resume" && isPut) {
-    return handleMPUResume(request, env)
+    return await handleMPUResume(request, env)
   } else if (url.pathname === "/mpu/complete") {
     isMPUComplete = true // we will handle mpu complete later since it is uploaded with formdata
   } else if (url.pathname.startsWith("/mpu/")) {
@@ -122,23 +115,18 @@ export async function handlePostOrPut(
   }
 
   // check if password is legal
-  // TODO: sync checks to frontend
   if (passwdFromForm) {
-    if (passwdFromForm.length > MAX_PASSWD_LEN) {
-      throw new WorkerError(400, `password too long (${passwdFromForm.length} > ${MAX_PASSWD_LEN})`)
-    } else if (passwdFromForm.length < MIN_PASSWD_LEN) {
-      throw new WorkerError(400, `password too short (${passwdFromForm.length} < ${MIN_PASSWD_LEN})`)
-    } else if (passwdFromForm.includes("\n")) {
-      throw new WorkerError(400, `password should not contain newline`)
-    }
+    const [ok, msg] = verifyPassword(passwdFromForm)
+    if (!ok) throw new WorkerError(400, msg)
   }
 
   // check if name is legal
   if (nameFromForm !== undefined && isPut) {
     throw new WorkerError(400, `Cannot set name for a PUT request`)
   }
-  if (nameFromForm !== undefined && !NAME_REGEX.test(nameFromForm)) {
-    throw new WorkerError(400, `Name ${nameFromForm} not satisfying regexp ${NAME_REGEX}`)
+  if (nameFromForm !== undefined) {
+    const [ok, msg] = verifyName(nameFromForm)
+    if (!ok) throw new WorkerError(400, msg)
   }
 
   function makeResponse(created: PasteResponse, additionalHeaders: Record<string, string | undefined> = {}): Response {

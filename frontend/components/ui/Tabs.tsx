@@ -37,14 +37,17 @@ export function Tabs({ selectedKey, onSelectionChange, children, classNames = {}
               <button
                 key={tabKey}
                 onClick={() => onSelectionChange(tabKey)}
-                className={`pb-1 text-sm transition-colors relative ${isSelected ? "text-default-700" : "text-default-500 hover:text-default-700"} ${classNames.tab || ""}`}
+                className={`text-sm transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-default-400 rounded-sm ${isSelected ? "text-default-700" : "text-default-500 hover:text-default-700"} ${classNames.tab || ""}`}
               >
-                {(tab.props as { title: string }).title}
-                {isSelected && (
-                  <div
-                    className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-[2px] bg-default-700 rounded-t-sm ${classNames.cursor || ""}`}
-                  />
-                )}
+                <span className="relative inline-block pb-1">
+                  {(tab.props as { title: string }).title}
+                  {isSelected && (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-0 right-0 bottom-0 h-[2px] bg-default-700 ${classNames.cursor || ""}`}
+                    />
+                  )}
+                </span>
               </button>
             )
           })}

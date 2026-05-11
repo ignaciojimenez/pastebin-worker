@@ -18,6 +18,10 @@ binding = "ASSETS"
 # clean r2 garbage every day
 crons = ["0 0 * * *"]
 
+[observability]
+# enable to collect logs
+enabled = true
+
 #----------------------------------------
 # lines below are what you should modify
 #----------------------------------------
@@ -68,7 +72,7 @@ MAX_EXPIRATION = "365d"
 BASIC_AUTH = {}
 
 # Files larger than this threshold will be stored in R2
-R2_THRESHOLD = "100K"
+R2_THRESHOLD = "20K"
 
 # File larger than this will be denied
 R2_MAX_ALLOWED = "200M"

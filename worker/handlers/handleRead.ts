@@ -1,5 +1,6 @@
-import { decode, isLegalUrl, WorkerError, escapeHtml } from "../common.js"
-import { getDocPage } from "../pages/docs.js"
+import { decode, WorkerError, escapeHtml } from "../common.js"
+import { isLegalUrl } from "../../shared/verify.js"
+import { getDocMarkdown, getCurlIndexMarkdown, renderDocAsHtml } from "../pages/docs.js"
 import { verifyAuth } from "../pages/auth.js"
 import { headlessLandingPage } from "../pages/headless.js"
 import mime from "mime"
@@ -10,7 +11,7 @@ import type { MetaResponse } from "../../shared/interfaces.js"
 import { parsePath } from "../../shared/parsers.js"
 import { MAX_URL_REDIRECT_LEN } from "../../shared/constants.js"
 import manifest from "../../dist/frontend/.vite/manifest.json"
-import { getAssetPaths, DARK_MODE_SCRIPT, type Manifest } from "../ssrUtils.js"
+import { getAssetPaths, DARK_MODE_SCRIPT } from "../ssrUtils.js"
 
 type Headers = Record<string, string>
 
@@ -46,8 +47,29 @@ function lastModifiedHeader(metadata: PasteMetadata): Headers {
   return lastModified ? { "Last-Modified": new Date(lastModified * 1000).toUTCString() } : {}
 }
 
+function isCurlAgent(request: Request): boolean {
+  const ua = request.headers.get("User-Agent") || ""
+  return ua.toLowerCase().startsWith("curl/")
+}
+
 async function handleStaticPages(request: Request, env: Env, _: ExecutionContext): Promise<Response | null> {
   const url = new URL(request.url)
+  const isCurl = isCurlAgent(request)
+
+  // Serve doc/index.md as plain markdown for curl on "/" or anyone on "/index.md"
+  if ((url.pathname === "/" && isCurl) || url.pathname === "/index.md") {
+    const authResponse = verifyAuth(request, env)
+    if (authResponse !== null) {
+      return authResponse
+    }
+    return new Response(getCurlIndexMarkdown(env), {
+      headers: {
+        "Content-Type": "text/plain;charset=UTF-8",
+        Vary: "User-Agent",
+        ...staticPageCacheHeader(env),
+      },
+    })
+  }
 
   let path = url.pathname
   if (path.endsWith("/")) {
@@ -94,7 +116,7 @@ async function handleStaticPages(request: Request, env: Env, _: ExecutionContext
     }
 
     // CSR fallback: dynamically generate empty HTML shell
-    const { jsFile, cssPath } = getAssetPaths(manifest as Manifest, "index.html")
+    const { jsFile, cssPath } = getAssetPaths(manifest, "index.html")
 
     return new Response(
       `<!doctype html>
@@ -142,14 +164,21 @@ ${DARK_MODE_SCRIPT}
     }
   }
 
-  const staticPageContent = getDocPage(url.pathname, env)
-  if (staticPageContent) {
-    return new Response(staticPageContent, {
-      headers: {
-        "Content-Type": "text/html;charset=UTF-8",
-        ...staticPageCacheHeader(env),
-      },
-    })
+  if (url.pathname === "/doc" || url.pathname.startsWith("/doc/")) {
+    const isExplicitMd = url.pathname.endsWith(".md")
+    const lookupPath = isExplicitMd ? url.pathname.slice(0, -3) : url.pathname
+    const docMd = getDocMarkdown(lookupPath, env)
+    if (docMd !== null) {
+      const wantsMarkdown = isExplicitMd || isCurl
+      return new Response(wantsMarkdown ? docMd : renderDocAsHtml(docMd), {
+        headers: {
+          "Content-Type": wantsMarkdown ? "text/plain;charset=UTF-8" : "text/html;charset=UTF-8",
+          Vary: "User-Agent",
+          ...staticPageCacheHeader(env),
+        },
+      })
+    }
+    throw new WorkerError(404, `doc page '${url.pathname}' not found`)
   }
 
   return null
@@ -271,8 +300,7 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
   if (role === "d") {
     try {
       const { renderDisplayPage } = await import("../pages/display.js")
-      const displayName = url.pathname.slice(3) // Remove "/d/" prefix
-      const page = await renderDisplayPage(env, displayName, item.paste, item.metadata)
+      const page = await renderDisplayPage(env, name, filename, ext, item.paste, item.metadata)
       if (page) {
         return new Response(isHead ? null : page, {
           headers: {

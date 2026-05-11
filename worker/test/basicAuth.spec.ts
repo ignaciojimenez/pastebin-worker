@@ -41,9 +41,14 @@ describe("basic auth", () => {
   })
 
   it("should forbid accessing index without auth", async () => {
-    for (const page of ["", "index", "index.html"]) {
+    for (const page of ["", "index", "index.html", "index.md"]) {
       expect((await workerFetch(ctx, `${BASE_URL}/${page}`)).status, `visiting ${page}`).toStrictEqual(401)
     }
+  })
+
+  it("should forbid accessing curl index without auth", async () => {
+    const resp = await workerFetch(ctx, new Request(BASE_URL, { headers: { "User-Agent": "curl/8.0.0" } }))
+    expect(resp.status).toStrictEqual(401)
   })
 
   it("should allow accessing index without auth", async () => {
@@ -80,7 +85,7 @@ describe("basic auth", () => {
   })
 
   it("should allow accessing doc pages without auth", async () => {
-    for (const page of ["/api", "/tos"]) {
+    for (const page of ["/doc/api", "/doc/tos", "/doc/curl"]) {
       expect((await workerFetch(ctx, `${BASE_URL}${page}`)).status, `visiting ${page}`).toStrictEqual(200)
     }
   })
