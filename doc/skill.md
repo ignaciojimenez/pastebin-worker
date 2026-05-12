@@ -63,8 +63,9 @@ curl -X DELETE                   <manageUrl>
 
 ## Other URL forms
 
-- `/d/<name>` — display page with syntax highlighting.
-- `/a/<name>` — render the paste as HTML (GitHub-flavored Markdown + MathJax).
+- `/d/<name>` — display code with syntax highlighting. Append `?lang=<lang>` to override
+  the highlighting language.
+- `/a/<name>` — render a markdown paste as HTML (GitHub-flavored Markdown + MathJax).
 - `/u/<name>` — redirect to the URL stored in the paste (URL shortener).
 
 ## Limitations
