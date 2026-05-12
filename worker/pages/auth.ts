@@ -21,13 +21,29 @@ export function decodeBasicAuth(encodedString: string): {
   return { username, password }
 }
 
+// Resolve the configured user→hash map. Prefer BASIC_AUTH_HASHES (a JSON
+// string set via `wrangler secret put`) so credentials don't sit in
+// committed wrangler.toml vars. Fall back to env.BASIC_AUTH (object var,
+// upstream-compatible) when the secret is absent.
+function resolveBasicAuthMap(env: Env): Record<string, string> {
+  const secretJson = (env as unknown as { BASIC_AUTH_HASHES?: string }).BASIC_AUTH_HASHES
+  if (typeof secretJson === "string" && secretJson.length > 0) {
+    try {
+      const parsed: unknown = JSON.parse(secretJson)
+      if (parsed && typeof parsed === "object") return parsed as Record<string, string>
+    } catch {
+      throw new WorkerError(500, "Configuration Error: BASIC_AUTH_HASHES is not valid JSON")
+    }
+  }
+  return (env.BASIC_AUTH as Record<string, string>) || {}
+}
+
 // return null if auth passes or is not required,
 // return auth page if auth is required
 // throw WorkerError if auth failed
 export function verifyAuth(request: Request, env: Env): Response | null {
-  // pass auth if 'BASIC_AUTH' is not present
-  const basic_auth = env.BASIC_AUTH as Record<string, string>
-  const auth_entries = Object.entries(basic_auth || {})
+  const basic_auth = resolveBasicAuthMap(env)
+  const auth_entries = Object.entries(basic_auth)
 
   const passwdMap = new Map<string, string>()
   for (const [user, hash] of auth_entries) {
