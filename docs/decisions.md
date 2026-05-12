@@ -1,7 +1,7 @@
 # Architecture & Strategy Decisions
 
 - **Headless mode**: Single `HEADLESS_MODE` flag disables upload UI, URL redirects (`/u/`), and article rendering (`/a/`). Kept as upstream PR candidate.
-- **Auth strategy**: Bcrypt-hashed HTTP Basic Auth (`BASIC_AUTH` in `wrangler.toml`). Enabled on production — uploads require auth, reads remain public.
+- **Auth strategy**: Bcrypt-hashed HTTP Basic Auth via `BASIC_AUTH_HASHES` wrangler **secret** (JSON string `{"user":"$2b$..."}`). Set via `wrangler secret put`, not `[vars]`, so the empty `BASIC_AUTH = {}` in committed `wrangler.toml` cannot silently disable auth on a clean-checkout redeploy (which is exactly what happened on 2026-03-14, leaving prod open for 8 weeks). Worker's `resolveBasicAuthMap()` prefers the secret, falls back to upstream's `env.BASIC_AUTH` var for compat. Only POSTs are gated; reads remain public.
 - **Package manager**: Migrated from yarn to pnpm. Note: `pnpm deploy` is a built-in workspace command — always use `pnpm run deploy` to invoke scripts.
 - **Branch model**: `goshujin` tracks upstream for clean PRs. `main` carries fork-only config (Nix flake, personal wrangler values, favicon).
 - **Rebase over merge**: Rebuilt `main` as clean commits on top of goshujin. Easier to maintain and rebase on future upstream syncs.
