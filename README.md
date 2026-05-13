@@ -1,4 +1,4 @@
-# Pastebin-worker
+# Pastebin Worker
 
 This is a pastebin running on Cloudflare workers. Try it on [shz.al](https://shz.al).
 
@@ -9,7 +9,7 @@ This is a pastebin running on Cloudflare workers. Try it on [shz.al](https://shz
 1. Share your paste with as short as 4 characters, or even customized URL.
 1. **Syntax highlighting** powered by highlight.js.
 1. Client-side encryption.
-1. Render **markdown** file as HTML.
+1. Share **markdown** file with rendered HTML.
 1. URL shortener.
 1. Smart and tweakable handling for `Content-Type` and `Content-Disposition`.
 
@@ -17,27 +17,11 @@ This is a pastebin running on Cloudflare workers. Try it on [shz.al](https://shz
 
 1. You can post, update, delete your paste directly on the website (such as [shz.al](https://shz.al)).
 
-2. It also provides a convenient HTTP API to use. See [API reference](doc/api.md) for details. You can easily call API via command line (using `curl` or similar tools).
+2. It also provides a convenient HTTP API to use. See [API reference](doc/api.md) for details. You can easily call API via command line (using `curl` or similar tools). Note that a single request body is capped at 100 MB by Cloudflare (the platform returns HTTP `413` for larger bodies before the worker runs) — for larger files, use the website or the `pb` CLI below, which transparently chunk the upload.
 
-3. [pb](/scripts) is a bash script to make it easier to use on command line.
+3. [pb](/scripts) is a Python script (requires Python 3.9+ with the `requests` package) to make it easier to use on command line; it automatically switches to multipart upload above 5 MiB and shows a progress bar.
 
 4. [doc/skill.md](doc/skill.md) is a concise, AI-agent-oriented packaging of the API. Make it available to your coding agent so it can upload, fetch, and manage pastes via this service.
-
-## Cost
-
-The service runs on Cloudflare Workers, Workers KV, and R2. Each has a free tier; beyond it you pay only for what you use. Figures below are accurate as of writing — **prices change, so confirm against the official pricing pages before relying on them**:
-
-- **[Workers](https://developers.cloudflare.com/workers/platform/pricing/)** — Free plan: 100,000 requests/day, 10 ms CPU per invocation. Paid plan: $5/mo base, includes 10 M requests/month + 30 M ms CPU/month, then $0.30 per additional million requests and $0.02 per additional million CPU-ms. Egress is free. The $5/mo Paid plan also unlocks the higher KV limits below (KV does not have a separate paid plan).
-- **[Workers KV](https://developers.cloudflare.com/kv/platform/pricing/)** (small pastes and per-paste metadata) — Free plan (daily, resets 00:00 UTC): 100 k reads, 1 k writes, 1 k deletes, 1 k list ops, 1 GB storage. Paid plan (monthly + overage): 10 M reads ($0.50/M extra), 1 M writes ($5/M), 1 M deletes ($5/M), 1 M list ops ($5/M), 1 GB storage ($0.50/GB-month extra).
-- **[R2](https://developers.cloudflare.com/r2/pricing/)** (paste content above `R2_THRESHOLD`) — Free: 10 GB-month storage, 1 M Class A ops/month, 10 M Class B ops/month, **egress free**. Standard paid: $0.015/GB-month storage, $4.50 per million Class A ops (writes/lists), $0.36 per million Class B ops (reads). Class A op = upload (`PutObject`); Class B op = fetch (`GetObject`). Cloudflare rounds storage up to the next GB-month.
-- **[Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)** (optional, off unless enabled in `wrangler.toml`) — Free: 200 k events/day, 3-day retention. Paid: 20 M events/month included + $0.60 per additional million, 7-day retention.
-
-For a personal deployment the free tier is typically sufficient. Costs scale primarily with: large file traffic (R2 ops + storage), high-volume reads (Workers requests + KV reads), and verbose logging (Workers Logs events).
-
-**Bottom line — what each tier comfortably handles**:
-
-- **Free tier**: a personal pastebin. The binding limits are KV writes (**1,000 uploads/day**) and KV/Workers reads (**~100,000 fetches/day**), with **1 GB** of small-paste storage and **10 GB** of large-paste storage on R2. Plenty for individual or small-team use.
-- **$5/month Paid**: a small public or community service. Roughly **~33,000 uploads/day** and **~333,000 fetches/day** stay within the included monthly KV allotment; Workers requests included to ~10 M/month (~333 k/day). R2 storage and ops come out of R2's separate free tier first, then a few cents per GB-month and per million ops — adding only a few dollars even at moderate traffic.
 
 ## Deploy
 
@@ -45,9 +29,14 @@ You are free to deploy the pastebin on your own domain if you host your domain o
 
 1. Install `node` and `pnpm`.
 
-2. Create a KV namespace and R2 bucket on Cloudflare workers dashboard, remember its ID.
+2. Clone the repository and enter the directory.
 
-3. Clone the repository and enter the directory.
+3. Create a KV namespace and R2 bucket, fill the KV namespace ID and R2 bucket name in `wrangler.toml`.
+
+```console
+$ pnpm wrangler kv namespace create PB
+$ pnpm wrangler r2 bucket create <name>
+```
 
 4. Modify entries in `wrangler.toml`. Its comments will tell you how.
 
@@ -61,6 +50,33 @@ $ pnpm deploy
 ```
 
 6. Enjoy!
+
+## Cost
+
+The service runs on Cloudflare Workers, Workers KV, and R2. Each has a free tier; beyond it you pay only for what you use. Figures below are accurate as of writing — **prices change, so confirm against the official pricing pages before relying on them**:
+
+- **[Workers](https://developers.cloudflare.com/workers/platform/pricing/)** — request routing and execution. Egress is free.
+  - Free plan: 100 k requests/day, 10 ms CPU per invocation.
+  - Paid plan ($5/mo base): 10 M requests/month + 30 M ms CPU/month included, then $0.30 per additional M requests and $0.02 per additional M CPU-ms. Also unlocks the higher KV limits below (KV has no separate paid plan).
+- **[Workers KV](https://developers.cloudflare.com/kv/platform/pricing/)** — small pastes and per-paste metadata.
+  - Free plan (daily, resets 00:00 UTC): 100 k reads, 1 k writes, 1 k deletes, 1 k list ops, 1 GB storage.
+  - Paid plan (monthly + overage): 10 M reads ($0.50/M extra), 1 M writes ($5/M), 1 M deletes ($5/M), 1 M list ops ($5/M), 1 GB storage ($0.50/GB-month extra).
+- **[R2](https://developers.cloudflare.com/r2/pricing/)** — paste content above `R2_THRESHOLD`. Egress is free. Class A op = upload (`PutObject`); Class B op = fetch (`GetObject`). Cloudflare rounds storage up to the next GB-month.
+  - Free: 10 GB-month storage, 1 M Class A ops/month, 10 M Class B ops/month.
+  - Standard paid: $0.015/GB-month storage, $4.50/M Class A ops, $0.36/M Class B ops.
+- **[Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)** — optional, off unless enabled in `wrangler.toml`.
+  - Free: 200 k events/day, 3-day retention.
+  - Paid: 20 M events/month included + $0.60 per additional million, 7-day retention.
+
+Costs scale primarily with: large file traffic (R2 ops + storage), high-volume reads (Workers requests + KV reads), and verbose logging (Workers Logs events).
+
+**Bottom line — what each tier comfortably handles**:
+
+- **Free tier — a personal pastebin.** Binding limits are KV writes (**1 k uploads/day**) and KV/Workers reads (**~100 k fetches/day**), with **1 GB** small-paste storage and **10 GB** large-paste storage on R2. Plenty for individual or small-team use.
+- **$5/month Paid — a small public or community service.** Roughly **~33 k uploads/day** and **~333 k fetches/day** stay within the included monthly KV allotment; Workers requests included to ~10 M/month (~333 k/day). R2 storage and ops come out of R2's own free tier first, then a few cents per GB-month and per million ops — adding only a few dollars even at moderate traffic.
+
+> [!NOTE]
+> Small pastes go to KV (not R2) to keep garbage collection cheap. KV honors per-key expiration natively, so expired pastes vanish on their own. R2 has no built-in expiration, so cleaning up expired objects would require periodically listing and scanning every object in the bucket — costly in Class A/B ops as the bucket grows.
 
 ## Headless Mode
 

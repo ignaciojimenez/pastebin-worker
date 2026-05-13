@@ -15,3 +15,4 @@ coverage
 .pnp.*
 .yarn
 .direnv
+__pycache__

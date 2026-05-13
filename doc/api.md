@@ -12,7 +12,7 @@ The `Content-Type` header is set to the mime type inferred from the filename of 
 
 The `Content-Disposition` header is set to `inline` by default. But can be overriden by `?a` query string. If the paste is uploaded with filename, or `<filename>` is set in given request URL, `Content-Disposition` is appended with `filename*` indicating the filename. If the paste is encrypted, the filename is appended with `.encrypted` suffix.
 
-If the paste is encrypted, an `X-PB-Encryption-Scheme` header will be set to the encryption scheme.
+If the paste is encrypted, an `X-PB-Encryption-Scheme` header will be set to the encryption scheme. An `X-PB-Decrypted-Content-Type` header is also set to the mime type that the decrypted content would have (inferred from the same sources as `Content-Type` but ignoring the encryption-induced `application/octet-stream` fallback), so clients can decide how to render the plaintext without an extra round trip.
 
 If the paste is uploaded with a `lang` parameter, an `X-PB-Highlight-Language` header will be set to the highlight language.
 
@@ -144,7 +144,7 @@ Request a paste without returning the body. It accepts same parameters as all `G
 
 Upload your paste. It accept parameters in form-data:
 
-- `c`: mandatory. The **content** of your paste, text or binary. The maximum allowed size is set by the deployment (`R2_MAX_ALLOWED`). The `filename` in its `Content-Disposition` will be present when fetching the paste.
+- `c`: mandatory. The **content** of your paste, text or binary. The maximum allowed size is set by the deployment (`R2_MAX_ALLOWED`). The `filename` in its `Content-Disposition` will be present when fetching the paste. Note that a single Cloudflare Workers request body is capped at 100 MB — request bodies larger than that are rejected by the platform with HTTP `413 Payload Too Large` before the worker is invoked. For larger files, use the official web UI at `/` or the [`pb`](https://github.com/SharzyL/pastebin-worker/tree/goshujin/scripts) CLI, which transparently chunk the content via the multipart-upload endpoints.
 
 - `e`: optional. The **expiration** time of the paste. After this period of time, the paste is permanently deleted. It should be an integer or a float point number suffixed with an optional unit (seconds by default). Supported units: `s` (seconds), `m` (minutes), `h` (hours), `d` (days). For example, `360.25` means 360.25 seconds, and `25d` means 25 days. The actual expiration might be shorter than specified expiration due to limitations imposed by the administrator. If unspecified, a default expiration time setting is used.
 
@@ -165,7 +165,14 @@ Upload your paste. It accept parameters in form-data:
   "url": "https://shz.al/abcd",
   "manageUrl": "https://shz.al/abcd:w2eHqyZGc@CQzWLN=BiJiQxZ",
   "expirationSeconds": 1209600,
-  "expireAt": "2025-05-05T10:33:06.114Z"
+  "lastModifiedAt": "2025-05-01T10:33:06.114Z",
+  "createdAt": "2025-05-01T10:33:06.114Z",
+  "expireAt": "2025-05-05T10:33:06.114Z",
+  "sizeBytes": 4096,
+  "location": "KV",
+  "filename": "a.jpg",
+  "highlightLanguage": "rust",
+  "encryptionScheme": "AES-GCM"
 }
 ```
 
@@ -174,13 +181,14 @@ Explanation of the fields:
 - `url`: String. The URL to fetch the paste. When using a customized name, it looks like `https://shz.al/~myname`.
 - `manageUrl`: String. The URL to update and delete the paste, which is `url` suffixed by `:` and the password.
 - `expirationSeconds`: Number. The expiration seconds.
-- `expireAt`: String. An ISO String representing when the paste will expire.
+
+The remaining fields mirror the [`GET /m/<name>`](#get-mname) metadata response: `lastModifiedAt`, `createdAt`, `expireAt`, `sizeBytes`, `location`, and the optional `filename`, `highlightLanguage`, `encryptionScheme`.
 
 If error occurs, the worker returns status code different from `200`:
 
 - `400`: your request is in bad format.
 - `409`: the name is already used.
-- `413`: the content is too large.
+- `413`: the request body exceeds Cloudflare's 100 MB per-request cap (returned by the platform before the worker runs), or the content exceeds the deployment's `R2_MAX_ALLOWED`.
 - `500`: unexpected exception. You may report this to the author to give it a fix.
 
 ## **PUT** `/<name>:<passwd>`
@@ -194,7 +202,7 @@ If error occurs, the worker returns status code different from `200`:
 - `400`: your request is in bad format.
 - `403`: your password is not correct.
 - `404`: the paste of given name is not found.
-- `413`: the content is too large.
+- `413`: the request body exceeds Cloudflare's 100 MB per-request cap (returned by the platform before the worker runs), or the content exceeds the deployment's `R2_MAX_ALLOWED`.
 - `500`: unexpected exception. You may report this to the author to give it a fix.
 
 ## DELETE `/<name>:<passwd>`

@@ -81,4 +81,9 @@ describe("unsupported scheme throws", () => {
     const encoded = await encodeKey(key)
     await expect(decodeKey(bad, encoded)).rejects.toThrow(/Unsupported encryption scheme: RC4/)
   })
+
+  it("decodeKey rejects key with wrong byte length", async () => {
+    // 10 base64 chars decode to ~7-8 bytes — neither 16, 24, nor 32.
+    await expect(decodeKey("AES-GCM", "abcdefghij")).rejects.toThrow(/AES-GCM key must decode to 16, 24, or 32 bytes/)
+  })
 })

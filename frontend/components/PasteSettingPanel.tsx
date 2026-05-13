@@ -265,6 +265,10 @@ export function PanelSettingsPanel({
                   the server. Decryption happens in the browser, so only those with the key (not the server) can view
                   the decrypted content.
                 </div>
+                <div className="text-small mt-2 text-yellow-600">
+                  Only the paste content is encrypted. The filename and its inferred mime type remain visible to the
+                  server and anyone with the URL.
+                </div>
               </div>
             }
           >

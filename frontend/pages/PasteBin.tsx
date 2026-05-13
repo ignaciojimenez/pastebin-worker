@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Link } from "../components/ui/index.js"
 
@@ -12,11 +12,12 @@ import { PasteInputPanel } from "../components/PasteInputPanel.js"
 
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
-import { PASSWD_SEP, MAX_URL_REDIRECT_LEN } from "../../shared/constants.js"
+import { PASSWD_SEP, MAX_URL_REDIRECT_LEN, MAX_AUTO_FETCH_BYTES } from "../../shared/constants.js"
 
 import { verifyExpiration, verifyManageUrl, getMaxExpirationReadable } from "../utils/utils.js"
 import { verifyName, verifyPassword, isLegalUrl } from "../../shared/verify.js"
 import { useNameAvailability } from "../utils/useNameAvailability.js"
+import type { UploadProgress } from "../utils/uploader.js"
 import { uploadPaste } from "../utils/uploader.js"
 import { tst } from "../utils/overrides.js"
 
@@ -43,7 +44,9 @@ export function PasteBin({ config }: { config: Env }) {
   const [uploadedEncryptionKey, setUploadedEncryptionKey] = useState<string | undefined>(undefined)
 
   const [isUploadPending, startUpload] = useTransition()
-  const [loadingProgress, setLoadingProgress] = useState<number | undefined>(undefined)
+  const [isDeletePending, startDelete] = useTransition()
+  const [loadingProgress, setLoadingProgress] = useState<UploadProgress | undefined>(undefined)
+  const uploadAbortRef = useRef<AbortController | null>(null)
   const [isInitPasteLoading, startFetchingInitPaste] = useTransition()
 
   const [_, modeSelection, setModeSelection] = useDarkModeSelection()
@@ -61,9 +64,7 @@ export function PasteBin({ config }: { config: Env }) {
     // SSR environment check
     if (typeof window === "undefined") return
 
-    // TODO: do not fetch paste for a large file paste
     const pathname = location.pathname
-    // const pathname = new URL("http://localhost:8787/ds2W:ShNkSKdf5rZypdcJEcAdFmw3").pathname
     if (!pathname.includes(PASSWD_SEP)) return
     const { name, password, filename, ext } = parsePath(pathname)
 
@@ -80,35 +81,39 @@ export function PasteBin({ config }: { config: Env }) {
 
       startFetchingInitPaste(async () => {
         try {
+          const headResp = await fetch(pasteUrl, { method: "HEAD" })
+          if (!headResp.ok) {
+            await handleFailedResp(`Error on Fetching ${pasteUrl}`, headResp)
+            return
+          }
+          const contentType = headResp.headers.get("Content-Type")
+          const contentLength = Number(headResp.headers.get("Content-Length"))
+          const contentLang = headResp.headers.get("X-PB-Highlight-Language")
+          const contentDisp = headResp.headers.get("Content-Disposition")
+
+          const isText = contentType?.startsWith("text/") || !!contentLang
+          if (!isText || !Number.isFinite(contentLength) || contentLength >= MAX_AUTO_FETCH_BYTES) {
+            return
+          }
+
           const resp = await fetch(pasteUrl)
           if (!resp.ok) {
             await handleFailedResp(`Error on Fetching ${pasteUrl}`, resp)
             return
           }
-          const contentType = resp.headers.get("Content-Type")
-          const contentDisp = resp.headers.get("Content-Disposition")
-          const contentLang = resp.headers.get("X-PB-Highlight-Language")
 
           let pasteFilename = filename
           if (pasteFilename === undefined && contentDisp !== null) {
             pasteFilename = parseFilenameFromContentDisposition(contentDisp)
           }
 
-          if (contentLang || contentType?.startsWith("text/")) {
-            setEditorState({
-              editKind: "edit",
-              editContent: await resp.text(),
-              file: null,
-              editHighlightLang: contentLang || undefined,
-              editFilename: pasteFilename,
-            })
-          } else {
-            setEditorState({
-              editKind: "file",
-              editContent: "",
-              file: new File([await resp.blob()], pasteFilename || "[unknown filename]"),
-            })
-          }
+          setEditorState({
+            editKind: "edit",
+            editContent: await resp.text(),
+            file: null,
+            editHighlightLang: contentLang || undefined,
+            editFilename: pasteFilename,
+          })
         } catch (e) {
           handleError(`Error on Fetching ${pasteUrl}`, e as Error)
         }
@@ -117,6 +122,11 @@ export function PasteBin({ config }: { config: Env }) {
   }, [])
 
   function onStartUpload() {
+    const controller = new AbortController()
+    uploadAbortRef.current = controller
+    // Clear any previous result so a failed/cancelled retry doesn't show stale URLs.
+    setPasteResponse(undefined)
+    setUploadedEncryptionKey(undefined)
     startUpload(async () => {
       try {
         const uploaded = await uploadPaste(
@@ -125,21 +135,32 @@ export function PasteBin({ config }: { config: Env }) {
           setUploadedEncryptionKey,
           config,
           setLoadingProgress,
+          controller.signal,
         )
         setPasteResponse(uploaded)
+        setPasteSetting({ ...pasteSetting, uploadKind: "manage", manageUrl: uploaded.manageUrl })
       } catch (e) {
-        handleError("Error on Uploading Paste", e as Error)
+        if ((e as Error).name !== "AbortError") {
+          handleError("Error on Uploading Paste", e as Error)
+        }
+      } finally {
+        if (uploadAbortRef.current === controller) uploadAbortRef.current = null
       }
     })
   }
 
+  function onCancelUpload() {
+    uploadAbortRef.current?.abort()
+  }
+
   function onStartDelete() {
-    startUpload(async () => {
+    startDelete(async () => {
       try {
         const resp = await fetch(pasteSetting.manageUrl, { method: "DELETE" })
         if (resp.ok) {
           showModal("Deleted Successfully", "It may takes 60 seconds for the deletion to propagate to the world")
           setPasteResponse(undefined)
+          setPasteSetting({ ...pasteSetting, uploadKind: "short", manageUrl: "" })
         } else {
           await handleFailedResp("Error on Delete Paste", resp)
         }
@@ -211,8 +232,8 @@ export function PasteBin({ config }: { config: Env }) {
   )
 
   const isManageMode = pasteSetting.uploadKind === "manage"
-  const uploadDisabled = !canUpload() || isUploadPending
-  const deleteDisabled = !canDelete()
+  const uploadDisabled = !canUpload() || isUploadPending || isDeletePending
+  const deleteDisabled = !canDelete() || isUploadPending || isDeletePending
 
   const baseActionClass = `flex-1 py-3 text-center font-bold ${tst}`
   const uploadClass =
@@ -257,6 +278,8 @@ export function PasteBin({ config }: { config: Env }) {
           isPasteLoading={isInitPasteLoading}
           state={editorState}
           onStateChange={setEditorState}
+          config={config}
+          showModal={showModal}
           className="mt-6 mb-4 mx-2 lg:mx-0"
         />
         <div className="flex flex-col items-start lg:flex-row gap-4 mx-2 lg:mx-0">
@@ -272,6 +295,7 @@ export function PasteBin({ config }: { config: Env }) {
             <UploadedPanel
               isLoading={isUploadPending}
               loadingProgress={loadingProgress}
+              onCancel={onCancelUpload}
               pasteResponse={pasteResponse}
               encryptionKey={uploadedEncryptionKey}
               highlightLang={editorState.editKind === "edit" ? editorState.editHighlightLang : undefined}

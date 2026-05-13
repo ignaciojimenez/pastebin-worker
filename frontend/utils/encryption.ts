@@ -68,10 +68,14 @@ export async function encodeKey(key: CryptoKey): Promise<string> {
 
 export async function decodeKey(scheme: EncryptionScheme, key: string): Promise<CryptoKey> {
   if (scheme === "AES-GCM") {
-    return await crypto.subtle.importKey("raw", base64VariantDecode(key) as BufferSource, "AES-GCM", true, [
-      "encrypt",
-      "decrypt",
-    ])
+    const raw = base64VariantDecode(key)
+    if (raw.length !== 16 && raw.length !== 24 && raw.length !== 32) {
+      throw new Error(
+        `AES-GCM key must decode to 16, 24, or 32 bytes (128/192/256-bit), got ${raw.length} bytes. ` +
+          `Make sure the URL fragment after "#" was copied in full.`,
+      )
+    }
+    return await crypto.subtle.importKey("raw", raw as BufferSource, "AES-GCM", true, ["encrypt", "decrypt"])
   }
   throw new Error(`Unsupported encryption scheme: ${scheme as string}`)
 }
