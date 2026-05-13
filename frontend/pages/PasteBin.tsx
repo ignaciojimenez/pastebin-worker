@@ -12,7 +12,7 @@ import { PasteInputPanel } from "../components/PasteInputPanel.js"
 
 import type { PasteResponse } from "../../shared/interfaces.js"
 import { parsePath, parseFilenameFromContentDisposition } from "../../shared/parsers.js"
-import { PASSWD_SEP, MAX_URL_REDIRECT_LEN, MAX_MANAGE_URL_AUTO_FETCH_BYTES } from "../../shared/constants.js"
+import { PASSWD_SEP, MAX_URL_REDIRECT_LEN, MAX_AUTO_FETCH_BYTES } from "../../shared/constants.js"
 
 import { verifyExpiration, verifyManageUrl, getMaxExpirationReadable } from "../utils/utils.js"
 import { verifyName, verifyPassword, isLegalUrl } from "../../shared/verify.js"
@@ -92,7 +92,7 @@ export function PasteBin({ config }: { config: Env }) {
           const contentDisp = headResp.headers.get("Content-Disposition")
 
           const isText = contentType?.startsWith("text/") || !!contentLang
-          if (!isText || !Number.isFinite(contentLength) || contentLength >= MAX_MANAGE_URL_AUTO_FETCH_BYTES) {
+          if (!isText || !Number.isFinite(contentLength) || contentLength >= MAX_AUTO_FETCH_BYTES) {
             return
           }
 
