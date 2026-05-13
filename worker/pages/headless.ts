@@ -12,6 +12,6 @@ export function headlessLandingPage(env: Env): string {
   <p>API-only mode. Upload pastes via the HTTP API.</p>
   <h2>Quick Start</h2>
   <pre>curl -Fc=@file.txt ${deployUrl}</pre>
-  <p><a href="/api">API Reference</a> · <a href="/tos">Terms</a></p>
+  <p><a href="/doc/api">API Reference</a> · <a href="/doc/tos">Terms</a></p>
 </body></html>`
 }
