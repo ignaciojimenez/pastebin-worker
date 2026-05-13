@@ -83,6 +83,13 @@ Options:
                             filename. DIR defaults to the current directory and
                             is created if missing. Falls back to the paste name
                             when the server has no filename
+    -f, --force             with --save, overwrite an existing file without
+                            prompting (non-interactive callers must pass -f
+                            to overwrite). Also bypasses the binary-output
+                            guard: pb refuses to dump binary content to a
+                            terminal (NUL byte detected) unless -f is given;
+                            piping to another process or using -o/--save
+                            always works
 
   delete options:
     none

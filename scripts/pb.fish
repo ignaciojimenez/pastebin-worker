@@ -51,4 +51,5 @@ complete -c pb -n "__fish_seen_subcommand_from get g" -l meta -f -d 'Fetch /m/<n
 complete -c pb -n "__fish_seen_subcommand_from get g" -s K -l key -x -d 'Decryption key (overrides history)'
 complete -c pb -n "__fish_seen_subcommand_from get g" -l no-decrypt -f -d 'Do not decrypt encrypted pastes'
 complete -c pb -n "__fish_seen_subcommand_from get g" -l save -r -d 'Save under DIR using server filename'
+complete -c pb -n "__fish_seen_subcommand_from get g" -s f -l force -f -d 'Overwrite existing file without prompting'
 complete -c pb -n "__fish_seen_subcommand_from get g" -f -a '(__pb_hist_names)' -d 'paste from history'

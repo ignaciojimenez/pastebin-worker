@@ -80,6 +80,7 @@ case "$state" in
             '(-K --key)'{-K,--key}'[Decryption key (overrides history)]:key'
             '--no-decrypt[Do not decrypt encrypted pastes]'
             '--save[Save under DIR using server filename]::dir:_files -/'
+            '(-f --force)'{-f,--force}'[Overwrite existing file without prompting]'
         )
         _arguments -s $args $common_args
         ;;

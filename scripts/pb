@@ -197,6 +197,22 @@ def bare_paste_name(name: str) -> str:
     return name.split(".", 1)[0]
 
 
+def _confirm_overwrite(path: Path) -> bool:
+    # Non-interactive callers must opt in explicitly via -f/--force; we refuse
+    # rather than silently overwriting or silently skipping so scripts get a
+    # clear signal.
+    if not sys.stdin.isatty():
+        die(
+            f"refusing to overwrite '{path}' in non-interactive mode; "
+            "pass -f/--force to overwrite"
+        )
+    try:
+        ans = input(f"file '{path}' exists, overwrite? [y/N] ").strip().lower()
+    except EOFError:
+        return False
+    return ans in ("y", "yes")
+
+
 def parse_content_disposition_filename(header: Optional[str]) -> Optional[str]:
     # Worker always emits the RFC-5987 form: `filename*=UTF-8''<urlencoded>`.
     # Accept the legacy `filename="..."` too, in case that ever changes.
@@ -761,6 +777,10 @@ def cmd_get(args: argparse.Namespace, domain: str) -> None:
         except OSError as e:
             die(f"cannot create save dir '{base_dir}': {e}")
         out_path = base_dir / filename
+        if out_path.exists() and not args.force:
+            if not _confirm_overwrite(out_path):
+                logger.info("aborted; file not overwritten")
+                return
         out_path.write_bytes(content)
         logger.info(f"saved to '{out_path}'")
         return
@@ -768,6 +788,16 @@ def cmd_get(args: argparse.Namespace, domain: str) -> None:
     if args.output:
         Path(args.output).write_bytes(content)
     else:
+        # Mirror curl's behaviour: refuse to splat binary at a terminal,
+        # because escape sequences in the content can wedge the user's tty.
+        # A NUL byte is the simplest reliable binary signal and matches what
+        # file(1) and most tools use.
+        if sys.stdout.isatty() and b"\x00" in content and not args.force:
+            die(
+                "refusing to write binary output to a terminal. "
+                "Use -o FILE to save, --save [DIR] to use the server filename, "
+                "pipe the output, or pass -f/--force to write anyway"
+            )
         sys.stdout.buffer.write(content)
 
 
@@ -936,6 +966,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="save under DIR using the server-provided filename "
         "(DIR defaults to current directory; falls back to the paste name "
         "if the server has no filename)",
+    )
+    p_get.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="with --save, overwrite an existing file without prompting; "
+        "without --save, allow binary content to be written to a terminal",
     )
     p_get.set_defaults(func=cmd_get)
 
