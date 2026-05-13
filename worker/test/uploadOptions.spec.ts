@@ -131,21 +131,24 @@ test("encryption with option encryption-scheme", async () => {
   expect(fetchPaste.headers.get("Content-Type")).toStrictEqual("application/octet-stream")
   expect(fetchPaste.headers.get("Content-Disposition")).toStrictEqual("inline; filename*=UTF-8''a.pdf.encrypted")
   expect(fetchPaste.headers.get("X-PB-Encryption-Scheme")).toStrictEqual("AES-GCM")
-  expect(fetchPaste.headers.get("Access-Control-Expose-Headers")?.includes("X-PB-Encryption-Scheme")).toStrictEqual(
-    true,
-  )
+  expect(fetchPaste.headers.get("X-PB-Decrypted-Content-Type")).toStrictEqual("application/pdf")
+  const exposed = fetchPaste.headers.get("Access-Control-Expose-Headers") ?? ""
+  expect(exposed.includes("X-PB-Encryption-Scheme")).toStrictEqual(true)
+  expect(exposed.includes("X-PB-Decrypted-Content-Type")).toStrictEqual(true)
 
   // fetch with filename, now the content-disposition and content-type should be changed
   const fetchPasteWithFilename = await workerFetch(ctx, url + "/b.pdf")
   await fetchPasteWithFilename.bytes()
   expect(fetchPasteWithFilename.headers.get("Content-Disposition")).toStrictEqual("inline; filename*=UTF-8''b.pdf")
   expect(fetchPasteWithFilename.headers.get("Content-Type")).toStrictEqual("application/pdf")
+  expect(fetchPasteWithFilename.headers.get("X-PB-Decrypted-Content-Type")).toStrictEqual("application/pdf")
 
   // fetch with ext, now only the content-type is chaanged
   const fetchPasteWithExt = await workerFetch(ctx, url + ".pdf")
   await fetchPasteWithExt.bytes()
   expect(fetchPasteWithExt.headers.get("Content-Disposition")).toStrictEqual("inline; filename*=UTF-8''a.pdf.encrypted")
   expect(fetchPasteWithExt.headers.get("Content-Type")).toStrictEqual("application/pdf")
+  expect(fetchPasteWithExt.headers.get("X-PB-Decrypted-Content-Type")).toStrictEqual("application/pdf")
 
   const fetchMeta: MetaResponse = await (await workerFetch(ctx, addRole(url, "m"))).json()
   expect(fetchMeta.encryptionScheme).toStrictEqual("AES-GCM")

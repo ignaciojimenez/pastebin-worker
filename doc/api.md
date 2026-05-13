@@ -12,7 +12,7 @@ The `Content-Type` header is set to the mime type inferred from the filename of 
 
 The `Content-Disposition` header is set to `inline` by default. But can be overriden by `?a` query string. If the paste is uploaded with filename, or `<filename>` is set in given request URL, `Content-Disposition` is appended with `filename*` indicating the filename. If the paste is encrypted, the filename is appended with `.encrypted` suffix.
 
-If the paste is encrypted, an `X-PB-Encryption-Scheme` header will be set to the encryption scheme.
+If the paste is encrypted, an `X-PB-Encryption-Scheme` header will be set to the encryption scheme. An `X-PB-Decrypted-Content-Type` header is also set to the mime type that the decrypted content would have (inferred from the same sources as `Content-Type` but ignoring the encryption-induced `application/octet-stream` fallback), so clients can decide how to render the plaintext without an extra round trip.
 
 If the paste is uploaded with a `lang` parameter, an `X-PB-Highlight-Language` header will be set to the highlight language.
 

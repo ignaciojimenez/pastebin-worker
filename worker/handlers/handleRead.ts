@@ -203,16 +203,21 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
     throw new WorkerError(404, `paste of name '${name}' not found`)
   }
 
-  let inferred_mime =
+  const disallowedMimes = env.DISALLOWED_MIME_FOR_PASTE as readonly string[]
+  const sanitize = (m: string) => (disallowedMimes.includes(m) ? "text/plain;charset=UTF-8" : m)
+
+  const realMime =
     url.searchParams.get("mime") ||
     (ext && mime.getType(ext)) ||
-    (item.metadata.encryptionScheme && "application/octet-stream") ||
     (item.metadata.filename && mime.getType(item.metadata.filename)) ||
     "text/plain;charset=UTF-8"
 
-  if ((env.DISALLOWED_MIME_FOR_PASTE as readonly string[]).includes(inferred_mime)) {
-    inferred_mime = "text/plain;charset=UTF-8"
-  }
+  let inferred_mime = item.metadata.encryptionScheme
+    ? url.searchParams.get("mime") || (ext && mime.getType(ext)) || "application/octet-stream"
+    : realMime
+  inferred_mime = sanitize(inferred_mime)
+
+  const decryptedContentType = item.metadata.encryptionScheme ? sanitize(realMime) : null
 
   // check `if-modified-since`
   const pasteLastModifiedUnix = item.metadata.lastModifiedAtUnix
@@ -315,6 +320,10 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
   if (item.metadata.encryptionScheme) {
     headers["X-PB-Encryption-Scheme"] = item.metadata.encryptionScheme
     exposeHeaders.push("X-PB-Encryption-Scheme")
+    if (decryptedContentType !== null) {
+      headers["X-PB-Decrypted-Content-Type"] = decryptedContentType
+      exposeHeaders.push("X-PB-Decrypted-Content-Type")
+    }
   }
 
   if (item.metadata.highlightLanguage) {
