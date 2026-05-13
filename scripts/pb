@@ -4,16 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import logging
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Callable, Optional
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
@@ -21,6 +24,8 @@ DEFAULT_DOMAIN = "https://shz.al"
 SCRIPT_NAME = "pb"
 MPU_THRESHOLD = 5 * 1024 * 1024  # switch to multipart upload above this size
 MPU_CHUNK_SIZE = 5 * 1024 * 1024  # R2 requires every part except the last to be >=5 MiB
+ENCRYPTION_SCHEME = "AES-GCM"
+ENCRYPTION_HEADER = "X-PB-Encryption-Scheme"
 
 LEVEL_COLORS = {
     logging.DEBUG: "90",
@@ -123,6 +128,91 @@ class ProgressReader:
         return chunk
 
 
+def _import_aesgcm():
+    # Lazy import so that users who never touch encryption don't need the
+    # optional 'cryptography' dependency installed.
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    except ImportError:
+        die(
+            "encryption requires the 'cryptography' package; "
+            "install it with `pip install cryptography`"
+        )
+        raise  # unreachable; appeases type-checker
+    return AESGCM
+
+
+def b64_variant_encode(data: bytes) -> str:
+    # Same variant as the frontend: '/' -> '_', strip trailing '='. '+' is kept.
+    return base64.b64encode(data).decode("ascii").replace("/", "_").rstrip("=")
+
+
+def b64_variant_decode(s: str) -> bytes:
+    s = s.replace("_", "/")
+    pad = (-len(s)) % 4
+    return base64.b64decode(s + "=" * pad)
+
+
+def encrypt_body(body: bytes) -> tuple[str, bytes]:
+    AESGCM = _import_aesgcm()
+    raw_key = os.urandom(32)
+    iv = os.urandom(12)
+    ciphertext = AESGCM(raw_key).encrypt(iv, body, None)
+    return b64_variant_encode(raw_key), iv + ciphertext
+
+
+def decrypt_body(scheme: str, encoded_key: str, blob: bytes) -> bytes:
+    if scheme != ENCRYPTION_SCHEME:
+        die(f"unsupported encryption scheme: {scheme}")
+    AESGCM = _import_aesgcm()
+    try:
+        raw_key = b64_variant_decode(encoded_key)
+    except (ValueError, base64.binascii.Error) as e:
+        die(f"invalid decryption key: {e}")
+        raise
+    if len(raw_key) not in (16, 24, 32):
+        die(
+            f"AES-GCM key must decode to 16/24/32 bytes, got {len(raw_key)}; "
+            "make sure the full URL fragment was passed"
+        )
+    if len(blob) < 12 + 16:
+        die("ciphertext too short to contain IV + GCM tag")
+    iv, ct = blob[:12], blob[12:]
+    from cryptography.exceptions import InvalidTag
+
+    try:
+        return AESGCM(raw_key).decrypt(iv, ct, None)
+    except InvalidTag:
+        die("decryption failed: wrong key or corrupted ciphertext")
+        raise
+
+
+def make_decryption_url(paste_url: str, encoded_key: str) -> str:
+    parts = urlsplit(paste_url)
+    return urlunsplit((parts.scheme, parts.netloc, "/d" + parts.path, "", encoded_key))
+
+
+def bare_paste_name(name: str) -> str:
+    # /get accepts NAME[.EXT]; the history is keyed on the bare name.
+    return name.split(".", 1)[0]
+
+
+def parse_content_disposition_filename(header: Optional[str]) -> Optional[str]:
+    # Worker always emits the RFC-5987 form: `filename*=UTF-8''<urlencoded>`.
+    # Accept the legacy `filename="..."` too, in case that ever changes.
+    if not header:
+        return None
+    m = re.search(r"filename\*=([^']*)'([^']*)'([^;]+)", header)
+    if m:
+        charset, _lang, value = m.groups()
+        try:
+            return unquote(value, encoding=charset or "utf-8")
+        except (LookupError, UnicodeDecodeError):
+            return unquote(value)
+    m = re.search(r'filename="([^"]+)"', header) or re.search(r"filename=([^;\s]+)", header)
+    return m.group(1) if m else None
+
+
 def setup_logger(verbose: bool) -> None:
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(ColorFormatter(use_color=sys.stderr.isatty()))
@@ -151,10 +241,28 @@ def ensure_history() -> Path:
     return p
 
 
-def append_history(entry: str) -> None:
+def append_history(entry: str, key: Optional[str] = None) -> None:
+    # entry is the manage-URL basename "NAME:PASSWD"; an optional decryption
+    # key is appended as "...#KEY" so the existing awk-based fish completion
+    # (split on ':') still sees NAME in $1.
     p = ensure_history()
+    line = entry if key is None else f"{entry}#{key}"
     with p.open("a") as f:
-        f.write(entry + "\n")
+        f.write(line + "\n")
+
+
+# PASSWD only forbids newlines, so it may legitimately contain '#'. KEYs are
+# b64-variant-encoded raw AES keys, so they are always [A-Za-z0-9+_]{22,32,43}
+# (no padding, for 128/192/256-bit). We rely on that exact shape to split a
+# 'PASSWD' / 'PASSWD#KEY' value without ambiguity.
+_KEY_SUFFIX_RE = re.compile(r"#([A-Za-z0-9+_]+)$")
+
+
+def _split_passwd_and_key(value: str) -> tuple[str, Optional[str]]:
+    m = _KEY_SUFFIX_RE.search(value)
+    if m and len(m.group(1)) in (22, 32, 43):
+        return value[: m.start()], m.group(1)
+    return value, None
 
 
 def lookup_passwd(name: str) -> Optional[str]:
@@ -164,7 +272,23 @@ def lookup_passwd(name: str) -> Optional[str]:
         for line in f:
             line = line.rstrip("\n")
             if line.startswith(f"{name}:"):
-                found = line.split(":", 1)[1]
+                value = line.split(":", 1)[1]
+                passwd, _ = _split_passwd_and_key(value)
+                found = passwd
+    return found
+
+
+def lookup_key(name: str) -> Optional[str]:
+    p = ensure_history()
+    found: Optional[str] = None
+    with p.open() as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if line.startswith(f"{name}:"):
+                value = line.split(":", 1)[1]
+                _, key = _split_passwd_and_key(value)
+                if key is not None:
+                    found = key
     return found
 
 
@@ -227,14 +351,26 @@ def _print_json(payload: dict) -> None:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
-def _finalize_response(payload: dict, clip_flag: bool) -> None:
+def _finalize_response(
+    payload: dict,
+    clip_flag: bool,
+    encryption_key: Optional[str] = None,
+) -> None:
+    page_url = payload.get("url")
+    display_url: Optional[str] = None
+    if encryption_key and page_url:
+        display_url = make_decryption_url(page_url, encryption_key)
+        # The server response does not include the key (client-side only),
+        # so surface it in the printed JSON for easy scripting.
+        payload["decryptionUrl"] = display_url
     _print_json(payload)
     manage_url = payload.get("manageUrl")
     if manage_url:
-        append_history(manage_basename(manage_url))
-    page_url = payload.get("url")
-    if clip_flag and page_url:
-        clip(page_url)
+        append_history(manage_basename(manage_url), key=encryption_key)
+    if clip_flag:
+        target = display_url or page_url
+        if target:
+            clip(target)
 
 
 def upload_mpu(
@@ -248,6 +384,8 @@ def upload_mpu(
     expire: Optional[str],
     dry: bool,
     clip_flag: bool,
+    encryption_key: Optional[str] = None,
+    filename: Optional[str] = None,
 ) -> None:
     """Multipart upload for files larger than MPU_THRESHOLD.
 
@@ -344,7 +482,7 @@ def upload_mpu(
                 f"{domain}/mpu/complete",
                 params=complete_params,
                 data=complete_data,
-                files={"c": ("paste", json.dumps(uploaded_parts).encode())},
+                files={"c": (filename, json.dumps(uploaded_parts).encode())},
             )
         except requests.RequestException as e:
             die(f"MPU complete failed: {e}")
@@ -373,7 +511,7 @@ def upload_mpu(
             except requests.RequestException as abort_err:
                 logger.warning(f"MPU abort failed; orphaned parts may remain: {abort_err}")
 
-    _finalize_response(payload, clip_flag)
+    _finalize_response(payload, clip_flag, encryption_key=encryption_key)
 
 
 def post_or_put(
@@ -385,13 +523,18 @@ def post_or_put(
     dry: bool,
     clip_flag: bool,
     log_url: Optional[str] = None,
+    encryption_key: Optional[str] = None,
+    filename: Optional[str] = None,
 ) -> None:
     files: dict = {}
     data: dict = {}
     for k, v in fields.items():
         data[k] = v
     if body is not None:
-        files["c"] = ("paste", body)
+        # When no filename is provided, pass None so requests omits the
+        # `filename=` parameter entirely; the worker then stores no filename
+        # and clients can fall back to the paste name on download.
+        files["c"] = (filename, body)
 
     log_request(
         method,
@@ -417,7 +560,7 @@ def post_or_put(
         die(f"non-JSON response: {resp.text}")
         return
 
-    _finalize_response(payload, clip_flag)
+    _finalize_response(payload, clip_flag, encryption_key=encryption_key)
 
 
 def parse_name_passwd(arg: str) -> tuple[str, Optional[str]]:
@@ -435,6 +578,11 @@ def cmd_post(args: argparse.Namespace, domain: str) -> None:
 
     file = args.file or args.file_pos
     body = read_content(file, args.content)
+    filename = args.filename or (Path(file).name if file else None)
+
+    encryption_key: Optional[str] = None
+    if args.encrypt:
+        encryption_key, body = encrypt_body(body)
 
     if len(body) > MPU_THRESHOLD:
         mpu_fields: dict = {}
@@ -442,6 +590,8 @@ def cmd_post(args: argparse.Namespace, domain: str) -> None:
             mpu_fields["e"] = args.expire
         if args.passwd:
             mpu_fields["s"] = args.passwd
+        if args.encrypt:
+            mpu_fields["encryption-scheme"] = ENCRYPTION_SCHEME
         upload_mpu(
             domain,
             body,
@@ -453,6 +603,8 @@ def cmd_post(args: argparse.Namespace, domain: str) -> None:
             expire=args.expire,
             dry=args.dry,
             clip_flag=args.clip,
+            encryption_key=encryption_key,
+            filename=filename,
         )
         return
 
@@ -465,8 +617,20 @@ def cmd_post(args: argparse.Namespace, domain: str) -> None:
         fields["s"] = args.passwd
     if args.private:
         fields["p"] = "true"
+    if args.encrypt:
+        fields["encryption-scheme"] = ENCRYPTION_SCHEME
 
-    post_or_put("POST", f"{domain}/", fields, body, args.verbose, args.dry, args.clip)
+    post_or_put(
+        "POST",
+        f"{domain}/",
+        fields,
+        body,
+        args.verbose,
+        args.dry,
+        args.clip,
+        encryption_key=encryption_key,
+        filename=filename,
+    )
 
 
 def cmd_update(args: argparse.Namespace, domain: str) -> None:
@@ -479,6 +643,11 @@ def cmd_update(args: argparse.Namespace, domain: str) -> None:
         )
 
     body = read_content(args.file, args.content)
+    filename = args.filename or (Path(args.file).name if args.file else None)
+
+    encryption_key: Optional[str] = None
+    if args.encrypt:
+        encryption_key, body = encrypt_body(body)
 
     if len(body) > MPU_THRESHOLD:
         mpu_fields: dict = {}
@@ -486,6 +655,8 @@ def cmd_update(args: argparse.Namespace, domain: str) -> None:
             mpu_fields["e"] = args.expire
         if args.passwd:
             mpu_fields["s"] = args.passwd
+        if args.encrypt:
+            mpu_fields["encryption-scheme"] = ENCRYPTION_SCHEME
         upload_mpu(
             domain,
             body,
@@ -497,6 +668,8 @@ def cmd_update(args: argparse.Namespace, domain: str) -> None:
             expire=args.expire,
             dry=args.dry,
             clip_flag=args.clip,
+            encryption_key=encryption_key,
+            filename=filename,
         )
         return
 
@@ -505,6 +678,8 @@ def cmd_update(args: argparse.Namespace, domain: str) -> None:
         fields["e"] = args.expire
     if args.passwd:
         fields["s"] = args.passwd
+    if args.encrypt:
+        fields["encryption-scheme"] = ENCRYPTION_SCHEME
 
     post_or_put(
         "PUT",
@@ -515,6 +690,8 @@ def cmd_update(args: argparse.Namespace, domain: str) -> None:
         args.dry,
         args.clip,
         log_url=f"{domain}/{name}:***",
+        encryption_key=encryption_key,
+        filename=filename,
     )
 
 
@@ -527,6 +704,8 @@ def cmd_get(args: argparse.Namespace, domain: str) -> None:
         prefix = "u"
     else:
         prefix = None
+    if args.save is not None and args.output:
+        die("cannot combine --save with -o/--output")
     base = f"{domain}/{prefix}/{args.name}" if prefix else f"{domain}/{args.name}"
 
     log_request("GET", base, {}, {})
@@ -551,10 +730,45 @@ def cmd_get(args: argparse.Namespace, domain: str) -> None:
         _print_json(payload)
         return
 
+    content = resp.content
+    scheme = resp.headers.get(ENCRYPTION_HEADER)
+    decrypted = False
+    if scheme and not args.no_decrypt:
+        key = args.key or lookup_key(bare_paste_name(args.name))
+        if not key:
+            die(
+                f"paste '{args.name}' is encrypted ({scheme}); pass --key KEY "
+                f"or use --no-decrypt to keep the raw ciphertext"
+            )
+        content = decrypt_body(scheme, key, content)
+        decrypted = True
+    elif args.key and not scheme:
+        logger.warning("--key given but paste is not encrypted; ignoring")
+
+    if args.save is not None:
+        server_name = parse_content_disposition_filename(resp.headers.get("Content-Disposition"))
+        # Server tags encrypted downloads with a trailing `.encrypted`; strip
+        # it once we've actually decrypted so the saved file gets its real name.
+        if decrypted and server_name and server_name.endswith(".encrypted"):
+            server_name = server_name[: -len(".encrypted")]
+        # Defend against absolute paths / traversal in the server-supplied name.
+        if server_name:
+            server_name = Path(server_name).name
+        filename = server_name or bare_paste_name(args.name)
+        base_dir = Path(args.save)
+        try:
+            base_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            die(f"cannot create save dir '{base_dir}': {e}")
+        out_path = base_dir / filename
+        out_path.write_bytes(content)
+        logger.info(f"saved to '{out_path}'")
+        return
+
     if args.output:
-        Path(args.output).write_bytes(resp.content)
+        Path(args.output).write_bytes(content)
     else:
-        sys.stdout.buffer.write(resp.content)
+        sys.stdout.buffer.write(content)
 
 
 def cmd_delete(args: argparse.Namespace, domain: str) -> None:
@@ -640,6 +854,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_post.add_argument(
         "-x", "--clip", action="store_true", help="copy URL to clipboard"
     )
+    p_post.add_argument(
+        "-E",
+        "--encrypt",
+        action="store_true",
+        help="client-side encrypt with a fresh AES-GCM key (requires 'cryptography')",
+    )
+    p_post.add_argument(
+        "-F",
+        "--filename",
+        help="override the filename stored with the paste "
+        "(defaults to the basename of the source file, if any)",
+    )
     p_post.add_argument("-f", "--file", help="read paste from file")
     p_post.add_argument(
         "file_pos", nargs="?", metavar="FILE", help="read paste from file (positional)"
@@ -663,6 +889,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_update.add_argument(
         "-x", "--clip", action="store_true", help="copy URL to clipboard"
     )
+    p_update.add_argument(
+        "-E",
+        "--encrypt",
+        action="store_true",
+        help="client-side encrypt with a fresh AES-GCM key (requires 'cryptography')",
+    )
+    p_update.add_argument(
+        "-F",
+        "--filename",
+        help="override the filename stored with the paste "
+        "(defaults to the basename of the source file, if any)",
+    )
     p_update.set_defaults(func=cmd_update)
 
     p_get = sub.add_parser(
@@ -678,6 +916,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_get.add_argument(
         "--meta", action="store_true", help="fetch /m/<name> metadata as pretty JSON"
+    )
+    p_get.add_argument(
+        "-K",
+        "--key",
+        help="decryption key (overrides history lookup); only used if paste is encrypted",
+    )
+    p_get.add_argument(
+        "--no-decrypt",
+        action="store_true",
+        help="do not decrypt encrypted pastes; write raw ciphertext",
+    )
+    p_get.add_argument(
+        "--save",
+        nargs="?",
+        const=".",
+        default=None,
+        metavar="DIR",
+        help="save under DIR using the server-provided filename "
+        "(DIR defaults to current directory; falls back to the paste name "
+        "if the server has no filename)",
     )
     p_get.set_defaults(func=cmd_get)
 
