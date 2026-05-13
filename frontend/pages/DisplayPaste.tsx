@@ -77,14 +77,20 @@ export function DisplayPaste({ config }: { config: Env }) {
           setGuessedEncoding(encoding)
         }
       } else {
-        const key = await decodeKey(scheme, keyString)
-        if (!key) {
-          showModal("Error", `Failed to parse "${keyString}" as ${scheme} key`)
+        let key: CryptoKey
+        try {
+          key = await decodeKey(scheme, keyString)
+        } catch (err) {
+          showModal("Invalid decryption key", (err as Error).message)
           return
         }
         const decrypted = await decrypt(scheme, key, respBytes)
         if (!decrypted) {
-          showModal("Error", "Failed to decrypt content")
+          showModal(
+            "Decryption failed",
+            "Could not decrypt the paste with the provided key. The URL fragment may be wrong, " +
+              "or the paste has been replaced or corrupted.",
+          )
           return
         }
         setPasteFile(new File([decrypted as BlobPart], inferredFilename || name, { type: blobMime }))

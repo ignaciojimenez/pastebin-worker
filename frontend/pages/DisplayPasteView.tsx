@@ -151,7 +151,7 @@ export function DisplayPasteView(props: DisplayPasteViewProps) {
       <div className="text-foreground-600 mb-2">{`${placeholderName} (${formatSize(pendingInfo.sizeBytes)})`}</div>
       <div className="w-fit text-center">
         {placeholderReason}{" "}
-        <Link href={pendingInfo.rawUrl} className="text-primary-500 inline">
+        <Link href={`${pendingInfo.rawUrl}?a`} className="text-primary-500 inline">
           Download raw
         </Link>
         {onLoadAnyway && (
@@ -176,22 +176,24 @@ export function DisplayPasteView(props: DisplayPasteViewProps) {
     >
       <div className="w-full max-w-[64rem]">
         <div className="flex flex-row my-4 items-center justify-between">
-          <h1 className="text-xl md:text-2xl grow inline-flex items-baseline">
-            <Link href="/" className="text-foreground-500 text-[length:inherited]">
+          <h1 className="text-xl md:text-2xl grow inline-flex items-baseline min-w-0">
+            <Link href="/" className="text-foreground-500 text-[length:inherited] shrink-0">
               <Button isIconOnly variant="light" aria-label={indexPageTitle} className={buttonClasses + " md:hidden"}>
                 <HomeIcon className="size-6" />
               </Button>
               <span className="hidden md:inline">{indexPageTitle}</span>
             </Link>
-            <span className="mx-2">{" / "}</span>
-            <span>{displayFilename ? name : name + (ext ?? "")}</span>
+            <span className="mx-2 shrink-0">{" / "}</span>
+            <span className="shrink-0">{displayFilename ? name : name + (ext ?? "")}</span>
             {displayFilename && (
               <>
-                <span className="mx-2">{" / "}</span>
-                <span>{displayFilename}</span>
+                <span className="mx-2 shrink-0">{" / "}</span>
+                <span className="truncate min-w-0" title={displayFilename}>
+                  {displayFilename}
+                </span>
               </>
             )}
-            <span className="ml-1">
+            <span className="ml-1 shrink-0">
               {isDecrypted === "decrypted" ? " (Decrypted)" : isDecrypted === "encrypted" ? " (Encrypted)" : ""}
             </span>
           </h1>
