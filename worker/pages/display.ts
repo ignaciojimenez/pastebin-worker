@@ -75,7 +75,8 @@ export async function renderDisplayPage(
 
   const inferredFilename = urlFilename || (urlExt && name + urlExt) || metadata.filename || name
   const pasteFile = new File([content], inferredFilename)
-  const titleName = name + (urlFilename ? "/" + urlFilename : urlExt ? urlExt : "")
+  const titleName =
+    name + (urlFilename ? " / " + urlFilename : urlExt ? urlExt : metadata.filename ? " / " + metadata.filename : "")
 
   const config: Env = {
     DEPLOY_URL: env.DEPLOY_URL,
