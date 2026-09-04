@@ -98,3 +98,16 @@ Options:
     -v, --verbose           log the planned request (method, URL, fields)
     -d, --dry               do a dry run, sending no HTTP request at all
 ```
+
+## smoke.sh
+
+Smoke-test a deployed instance — paste lifecycle, headless-mode guards, doc
+routes — before promoting a build.
+
+```shell
+scripts/smoke.sh https://pb-dev.i-jimenezpi.workers.dev   # dev preview
+scripts/smoke.sh https://curlbin.ignacio.systems          # production
+scripts/smoke.sh https://example.com user:password        # behind basic auth
+```
+
+Creates one paste and deletes it again; exits non-zero if any check fails.
