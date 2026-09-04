@@ -1,17 +1,22 @@
-export interface ManifestEntry {
-  file: string
-  imports?: string[]
-  css?: string[]
+// Slim per-entry asset map produced by the `ssr-manifest` Vite plugin in
+// frontend/vite.config.js. Importing the full Vite manifest pulls every chunk
+// (one per highlight.js language) into the worker bundle, which we don't want.
+export interface SsrAssetPaths {
+  jsFile: string
+  // ALL transitively-reached CSS chunk paths for this entry, not just one —
+  // an entry like index.html now reaches both a Tailwind/component-styles
+  // chunk and a highlight-theme chunk through different transitive imports.
+  cssPaths: string[]
 }
 
-export type Manifest = Record<string, ManifestEntry>
+export type SsrManifest = Record<string, SsrAssetPaths>
 
-export function getAssetPaths(manifest: Manifest, entryKey: string) {
-  const entry = manifest[entryKey]
-  const jsFile = entry?.file || `assets/${entryKey.replace(".html", ".js")}`
-  const cssImport = entry?.imports?.find((i) => manifest[i]?.css)
-  const cssPath = (cssImport && manifest[cssImport]?.css?.[0]) || "assets/style.css"
-  return { jsFile, cssPath }
+export function getAssetPaths(manifest: SsrManifest, entryKey: string): SsrAssetPaths {
+  return manifest[entryKey] ?? { jsFile: `assets/${entryKey.replace(".html", ".js")}`, cssPaths: ["assets/style.css"] }
+}
+
+export function renderCssLinks(cssPaths: readonly string[]): string {
+  return cssPaths.map((p) => `<link rel="stylesheet" href="/${p}">`).join("")
 }
 
 export const DARK_MODE_SCRIPT = `(function() {
