@@ -93,7 +93,7 @@ Explanation of the fields:
 
 Return the HTML converted from the markdown file stored in the paste of name `<name>`. The markdown conversion follows GitHub Flavored Markdown (GFM) Spec, supported by [remark-gfm](https://github.com/remarkjs/remark-gfm).
 
-Syntax highlighting is supported by [prism.js](https://prismjs.com/). LaTeX mathematics is supported by [MathJax](https://www.mathjax.org).
+Syntax highlighting is supported by [highlight.js](https://highlightjs.org/). LaTeX mathematics is supported by [MathJax](https://www.mathjax.org).
 
 If error occurs, the worker returns status code different from `200`:
 
