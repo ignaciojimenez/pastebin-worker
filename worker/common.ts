@@ -66,3 +66,12 @@ export function timingSafeEqual(a: string | undefined | null, b: string): boolea
   if (bufA.byteLength !== bufB.byteLength) return false
   return crypto.subtle.timingSafeEqual(bufA, bufB)
 }
+
+// HEADLESS_MODE is declared boolean, but wrangler `--var` overrides and some
+// deployment paths deliver vars as strings, where the plain `if (env.X)` check
+// treats "false" as enabled — failing open into the full UI's opposite. Accept
+// only a real `true` or the string "true".
+export function isHeadless(env: Env): boolean {
+  const value: unknown = env.HEADLESS_MODE
+  return value === true || (typeof value === "string" && value.toLowerCase() === "true")
+}

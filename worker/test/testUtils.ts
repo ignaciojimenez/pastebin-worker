@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test"
 
-import { expect } from "vitest"
+import { expect, beforeEach, afterEach } from "vitest"
 import crypto from "crypto"
 
 import worker from "../index.js"
@@ -140,4 +140,20 @@ export async function areBlobsEqual(blob1: Blob, blob2: Blob) {
 export function addRole(url: string, role: string): string {
   const splitPoint = env.DEPLOY_URL.length
   return url.slice(0, splitPoint) + "/" + role + url.slice(splitPoint)
+}
+
+// Several suites exercise behaviour that only exists with headless mode off
+// (URL redirects, article rendering, the auth-guarded index). Deployments that
+// set HEADLESS_MODE=true would otherwise fail them on configuration alone, so
+// pin the flag for the duration of the suite and restore it afterwards.
+export function useHeadlessMode(enabled: boolean): void {
+  const target = env as unknown as { HEADLESS_MODE: unknown }
+  let previous: unknown
+  beforeEach(() => {
+    previous = target.HEADLESS_MODE
+    target.HEADLESS_MODE = enabled
+  })
+  afterEach(() => {
+    target.HEADLESS_MODE = previous
+  })
 }

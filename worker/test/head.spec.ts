@@ -1,5 +1,5 @@
 import { expect, test, it, describe } from "vitest"
-import { addRole, genRandomBlob, upload, workerFetch } from "./testUtils.js"
+import { addRole, genRandomBlob, upload, workerFetch, useHeadlessMode } from "./testUtils.js"
 import { createExecutionContext } from "cloudflare:test"
 
 test("HEAD", async () => {
@@ -39,6 +39,7 @@ test("HEAD", async () => {
 })
 
 describe("HEAD with URL", () => {
+  useHeadlessMode(false)
   const ctx = createExecutionContext()
   it("should redirect for HEAD", async () => {
     const contentUrl = "https://example.com:1234/abc-def?g=hi&jk=l"

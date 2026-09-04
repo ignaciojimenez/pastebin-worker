@@ -69,4 +69,19 @@ describe("headless mode", () => {
     const text = await articleResp.text()
     expect(text).toContain("Article rendering is disabled in headless mode")
   })
+  it('should treat the string "false" as disabled, not enabled', async () => {
+    // A plain `if (env.HEADLESS_MODE)` check fails open here: any non-empty
+    // string is truthy, so "false" would keep headless mode on.
+    ;(env as unknown as { HEADLESS_MODE: unknown }).HEADLESS_MODE = "false"
+    const uploadResp = await upload(ctx, { c: new Blob(["# Hello"]) })
+    const articleResp = await workerFetch(ctx, addRole(uploadResp.url, "a"))
+    expect(articleResp.status).toStrictEqual(200)
+  })
+
+  it('should treat the string "true" as enabled', async () => {
+    ;(env as unknown as { HEADLESS_MODE: unknown }).HEADLESS_MODE = "true"
+    const uploadResp = await upload(ctx, { c: new Blob(["# Hello"]) })
+    const articleResp = await workerFetch(ctx, addRole(uploadResp.url, "a"))
+    expect(articleResp.status).toStrictEqual(403)
+  })
 })

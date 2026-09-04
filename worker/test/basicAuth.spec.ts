@@ -1,5 +1,13 @@
 import { expect, test, it, describe, beforeEach, afterEach } from "vitest"
-import { areBlobsEqual, BASE_URL, genRandomBlob, upload, uploadExpectStatus, workerFetch } from "./testUtils.js"
+import {
+  areBlobsEqual,
+  BASE_URL,
+  genRandomBlob,
+  upload,
+  uploadExpectStatus,
+  workerFetch,
+  useHeadlessMode,
+} from "./testUtils.js"
 import { encodeBasicAuth, decodeBasicAuth } from "../pages/auth.js"
 import { createExecutionContext, env } from "cloudflare:test"
 import { hashSync } from "bcrypt-ts"
@@ -19,6 +27,7 @@ test("basic auth encode and decode", () => {
 })
 
 describe("basic auth", () => {
+  useHeadlessMode(false)
   const ctx = createExecutionContext()
   const users: Record<string, string> = {
     user1: "passwd1",
