@@ -37,8 +37,13 @@ resp=$(curl -sS "${AUTH_ARGS[@]}" -Fc="$marker" "$BASE")
 url=$(printf '%s' "$resp" | sed -n 's/.*"url": *"\([^"]*\)".*/\1/p')
 manage=$(printf '%s' "$resp" | sed -n 's/.*"manageUrl": *"\([^"]*\)".*/\1/p')
 if [[ -z "$url" ]]; then
-  echo "  FAIL  upload returned no url; response was:" >&2
-  printf '%s\n' "$resp" >&2
+  if [[ "$resp" == *"basic auth is required"* || "$resp" == *"incorrect passwd"* ]]; then
+    echo "  FAIL  upload rejected: this deployment gates POST behind basic auth." >&2
+    echo "        Re-run with credentials:  $0 $BASE user:password" >&2
+  else
+    echo "  FAIL  upload returned no url; response was:" >&2
+    printf '%s\n' "$resp" >&2
+  fi
   exit 1
 fi
 name="${url##*/}"
