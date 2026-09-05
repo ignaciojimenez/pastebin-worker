@@ -18,6 +18,7 @@
     "delete-paste": "wrangler kv key delete --binding PB",
     "test": "vitest",
     "fmt": "prettier --write .",
+    "fmt:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "coverage": "vitest run --coverage"

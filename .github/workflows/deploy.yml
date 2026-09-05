@@ -34,7 +34,7 @@ jobs:
 
       - name: "Test"
         run: |
-          pnpm fmt
+          pnpm fmt:check
           pnpm lint
           pnpm typecheck
           pnpm test --testTimeout 15000
@@ -44,4 +44,4 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
-          pnpm wrangler deploy
+          pnpm wrangler deploy --env=""
