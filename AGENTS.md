@@ -78,7 +78,7 @@ Scope examples: `[frontend]`, `[worker]`, `[ci]`
 
 ## Fork-Only Files (never upstream)
 
-- `CLAUDE.md`
+- `AGENTS.md`
 - `DEV_GUIDE.md`
 - `flake.nix`, `flake.lock`, `.envrc`
 - `favicon.ico` (personal)
