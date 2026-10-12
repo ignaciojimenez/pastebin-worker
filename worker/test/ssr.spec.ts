@@ -36,7 +36,7 @@ describe("SSR Display Page", () => {
       expect(html).toContain("application/json")
       expect(html).toContain("window.__PASTE_DATA__")
 
-      const match = /<script id="__PASTE_DATA__" type="application\/json">(.*?)<\/script>/.exec(html)
+      const match = /<script[^>]* id="__PASTE_DATA__" type="application\/json">(.*?)<\/script>/.exec(html)
       expect(match).toBeTruthy()
 
       const data = JSON.parse(match![1]) as { name: string; content: string; metadata: unknown }

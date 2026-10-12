@@ -43,6 +43,7 @@ export async function renderDisplayPage(
   urlExt: string | undefined,
   paste: ArrayBuffer | ReadableStream<Uint8Array>,
   metadata: PasteMetadata,
+  nonce: string,
 ): Promise<string | null> {
   // Skip SSR for encrypted files (client needs hash key to decrypt)
   if (metadata.encryptionScheme) {
@@ -125,19 +126,19 @@ export async function renderDisplayPage(
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(env.INDEX_PAGE_TITLE)} / ${escapeHtml(titleName)}</title>
 ${renderCssLinks(cssPaths)}
-<script>
+<script nonce="${nonce}">
 ${DARK_MODE_SCRIPT}
 </script>
 </head>
 <body>
 <div id="root">${html}</div>
-<script id="__PASTE_DATA__" type="application/json">${JSON.stringify(serializedData)
+<script nonce="${nonce}" id="__PASTE_DATA__" type="application/json">${JSON.stringify(serializedData)
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029")}</script>
-<script>window.__PASTE_DATA__=JSON.parse(document.getElementById('__PASTE_DATA__').textContent)</script>
-<script type="module" src="/${jsFile}"></script>
+<script nonce="${nonce}">window.__PASTE_DATA__=JSON.parse(document.getElementById('__PASTE_DATA__').textContent)</script>
+<script nonce="${nonce}" type="module" src="/${jsFile}"></script>
 </body>
 </html>`
 }

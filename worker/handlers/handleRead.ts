@@ -11,6 +11,7 @@ import { parsePath } from "../../shared/parsers.js"
 import { MAX_URL_REDIRECT_LEN } from "../../shared/constants.js"
 import manifest from "../../dist/frontend/.vite/ssr-manifest.json"
 import { getAssetPaths, renderCssLinks, DARK_MODE_SCRIPT } from "../ssrUtils.js"
+import { displayPageCsp, newNonce, nonceTemplate } from "../csp.js"
 
 type Headers = Record<string, string>
 
@@ -293,13 +294,17 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
 
   // handle display page with SSR
   if (role === "d") {
+    // One nonce per response, on both the SSR and the CSR path (PER-43).
+    const nonce = newNonce()
+    const csp = displayPageCsp(nonce)
     try {
       const { renderDisplayPage } = await import("../pages/display.js")
-      const page = await renderDisplayPage(env, name, filename, ext, item.paste, item.metadata)
+      const page = await renderDisplayPage(env, name, filename, ext, item.paste, item.metadata, nonce)
       if (page) {
         return new Response(isHead ? null : page, {
           headers: {
             "Content-Type": `text/html;charset=UTF-8`,
+            "Content-Security-Policy": csp,
             ...pasteCacheHeader(env),
             ...lastModifiedHeader(item.metadata),
           },
@@ -313,13 +318,18 @@ export async function handleGet(request: Request, env: Env, ctx: ExecutionContex
     const pageUrl = url
     pageUrl.search = ""
     pageUrl.pathname = "/display.html"
-    const page = decode(await (await env.ASSETS.fetch(pageUrl)).arrayBuffer()).replace(
+    // Nonce the trusted template BEFORE the name goes in, and escape the name:
+    // the filename comes from the URL, and unescaped it could close <title>.
+    const page = nonceTemplate(decode(await (await env.ASSETS.fetch(pageUrl)).arrayBuffer()), nonce).replace(
       "{{PASTE_NAME}}",
-      name + (filename ? " / " + filename : ext ? ext : item.metadata.filename ? " / " + item.metadata.filename : ""),
+      escapeHtml(
+        name + (filename ? " / " + filename : ext ? ext : item.metadata.filename ? " / " + item.metadata.filename : ""),
+      ),
     )
     return new Response(isHead ? null : page, {
       headers: {
         "Content-Type": `text/html;charset=UTF-8`,
+        "Content-Security-Policy": csp,
         ...pasteCacheHeader(env),
         ...lastModifiedHeader(item.metadata),
       },
