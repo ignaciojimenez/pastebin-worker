@@ -4,6 +4,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Version updates wait 20 days after release; security updates are exempt.
+    cooldown:
+      default-days: 20
     groups:
       actions:
         patterns: ["*"]
@@ -12,6 +15,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Version updates wait 20 days after release; security updates are exempt.
+    cooldown:
+      default-days: 20
     open-pull-requests-limit: 5
     groups:
       npm-minor:
