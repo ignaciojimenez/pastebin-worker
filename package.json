@@ -43,7 +43,7 @@
     "toml": "^5.0.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.64.0",
-    "vite": "^8.1.4",
+    "vite": "~8.1.6",
     "vitest": "4.1.10",
     "wrangler": "^4.111.0"
   },
@@ -80,13 +80,14 @@
       "devalue": ">=5.6.4",
       "ws": "^8.21.0",
       "toml": "^5.0.1",
-      "sharp": "^0.35.0",
+      "sharp": "^0.35.5",
       "lodash": "^4.18.0",
       "browserslist": "^4.28.7",
       "postcss": "^8.5.23",
       "nanoid": "^3.3.18",
-      "brace-expansion": "^5.0.9",
-      "enhanced-resolve": "^5.22.1"
+      "brace-expansion": "^5.0.12",
+      "enhanced-resolve": "^5.22.1",
+      "source-map-js": "^1.2.2"
     }
   }
 }
