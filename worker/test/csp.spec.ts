@@ -8,7 +8,7 @@ import { displayPageCsp, nonceTemplate } from "../csp.js"
 // so these requests exercise the CSR path; the SSR template sets the same nonce
 // attributes directly.
 
-const scriptTags = (html: string) => [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0])
+const scriptTags = (html: string) => [...html.matchAll(/<script\b[^>]*>/gi)].map((m) => m[0])
 const nonceOf = (csp: string) => /'nonce-([^']+)'/.exec(csp)?.[1]
 
 describe("display page CSP", () => {
